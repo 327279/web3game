@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Balances, DailyLimit, BetDirection, BettingStep, MarketData } from '../types';
 import PriceChart from './PriceChart';
@@ -158,7 +159,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               <div className="flex justify-between items-center mt-2">
                 <div>
                   <p 
-                    className={`text-2xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
+                    className={`text-3xl sm:text-4xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
                   >
                     {isPriceChangePositive ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
                   </p>
@@ -169,12 +170,12 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
             </div>
             <div>
               <p className="text-xs text-brand-text mt-4">24h Volume</p>
-              <p className="text-xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
             </div>
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
             <p className="text-sm text-brand-text">BTC PRICE</p>
-            <p className="text-2xl font-bold text-white mb-2">${currentPrice.toFixed(4)}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-white mb-2">${currentPrice.toFixed(4)}</p>
             <PriceChart data={priceHistory} currentPrice={currentPrice} />
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">

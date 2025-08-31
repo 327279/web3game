@@ -68,7 +68,7 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
   const chartColor = isPriceUp ? '#a8ff00' : '#f84339';
 
   return (
-    <div className="flex justify-center items-center h-[70vh]">
+    <div className="flex justify-center items-center min-h-[calc(100vh-150px)] py-10">
       <div className="w-full max-w-4xl bg-brand-gray p-4 sm:p-8 rounded-xl border border-brand-light-gray animate-fade-in">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
           <div className="bg-brand-dark p-4 rounded-lg">

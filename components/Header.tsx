@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { playSound, isMuted, toggleMute } from '../utils/sound';
 import SoundOnIcon from './icons/SoundOnIcon';
@@ -24,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
 
   return (
     <header className="flex justify-between items-center bg-brand-gray p-4 rounded-xl border border-brand-light-gray">
-      <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter">
+      <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tighter">
         CHAD<span className="text-brand-green">FLIP</span>
       </h1>
       <div className="flex items-center gap-2 md:gap-4">

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { GameState, Bet, BetResult } from './types';
@@ -26,7 +27,7 @@ if (isConfigured) {
   const metadata = {
     name: 'ChadFlip Web3 Game',
     description: 'A Web3 betting game on the Monad Testnet.',
-    url: 'https://web3game.com', // origin must match your domain & subdomain
+    url: window.location.origin, // origin must match your domain & subdomain
     icons: ['https://avatars.githubusercontent.com/u/37784886']
   };
   

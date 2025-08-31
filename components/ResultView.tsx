@@ -1,4 +1,5 @@
 
+
 import React, { useEffect } from 'react';
 import { BetResult } from '../types';
 import { playSound } from '../utils/sound';
@@ -14,7 +15,7 @@ const ResultView: React.FC<ResultViewProps> = ({ result, onPlayAgain }) => {
   }, [result.won]);
 
   return (
-    <div className="flex justify-center items-center h-[70vh]">
+    <div className="flex justify-center items-center min-h-[calc(100vh-150px)] py-10">
       <div className="w-full max-w-md bg-brand-gray p-6 sm:p-10 rounded-xl border border-brand-light-gray text-center animate-fade-in">
         {result.won ? (
           <>
