@@ -3,6 +3,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GameState, Bet, BetResult, BettingStep } from './types';
 import useWeb3 from './hooks/useWeb3';
 import usePriceFeed from './hooks/usePriceFeed';
+import useMarketData from './hooks/useMarketData';
 import Header from './components/Header';
 import BettingView from './components/BettingView';
 import WaitingView from './components/WaitingView';
@@ -29,6 +30,7 @@ export default function App() {
   } = useWeb3();
 
   const { priceHistory, currentPrice } = usePriceFeed(108540.00);
+  const marketData = useMarketData();
 
   useEffect(() => {
     preloadSounds();
@@ -71,7 +73,7 @@ export default function App() {
   const renderContent = () => {
     switch (gameState) {
       case GameState.WAITING:
-        return currentBet && <WaitingView bet={currentBet} onResolution={handleResolution} />;
+        return currentBet && <WaitingView bet={currentBet} onResolution={handleResolution} currentPrice={currentPrice} />;
       case GameState.RESULT:
         return betResult && <ResultView result={betResult} onPlayAgain={handlePlayAgain} />;
       case GameState.BETTING:
@@ -82,6 +84,7 @@ export default function App() {
             currentPrice={currentPrice}
             balances={balances}
             dailyLimit={dailyLimit}
+            marketData={marketData}
             onPlaceBet={handlePlaceBet}
             isWalletConnected={!!address}
             loading={loading}

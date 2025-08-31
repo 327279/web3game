@@ -6,36 +6,39 @@ import ChartTooltip from './ChartTooltip';
 interface WaitingViewProps {
   bet: Bet;
   onResolution: (finalPrice: number) => void;
+  currentPrice: number;
 }
 
 const COUNTDOWN_SECONDS = 60;
 
-const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution }) => {
+const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPrice }) => {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [priceHistory, setPriceHistory] = useState([{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: bet.entryPrice }]);
 
-  const currentPrice = priceHistory[priceHistory.length - 1].price;
+  const latestChartPrice = priceHistory[priceHistory.length - 1].price;
 
+  // This effect updates the chart history whenever a new price comes from the parent
   useEffect(() => {
-    const priceInterval = setInterval(() => {
-      setPriceHistory(prev => {
-        const newPrice = prev[prev.length - 1].price + (Math.random() - 0.5) * 0.2;
-        return [...prev, { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: parseFloat(newPrice.toFixed(4)) }];
-      });
-    }, 1500);
+    // Only add a new point if the price has actually changed to avoid duplicate points
+    if (currentPrice !== latestChartPrice) {
+      setPriceHistory(prev => [
+        ...prev, 
+        { 
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), 
+          price: currentPrice 
+        }
+      ]);
+    }
+  }, [currentPrice, latestChartPrice]);
 
+  // This effect handles the countdown and final resolution
+  useEffect(() => {
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
-          clearInterval(priceInterval);
-          
-          setPriceHistory(currentHistory => {
-            const finalPrice = currentHistory[currentHistory.length - 1].price;
-            onResolution(finalPrice);
-            return currentHistory;
-          });
-
+          // Use the absolute latest price from the prop for resolution
+          onResolution(currentPrice);
           return 0;
         }
         return prev - 1;
@@ -44,9 +47,8 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution }) => {
 
     return () => {
       clearInterval(countdownInterval);
-      clearInterval(priceInterval);
     };
-  }, [onResolution]);
+  }, [onResolution, currentPrice]);
 
   const formatCountdown = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -105,4 +107,4 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution }) => {
   );
 };
 
-export default WaitingView;
+export default React.memo(WaitingView);

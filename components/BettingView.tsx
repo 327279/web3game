@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Balances, DailyLimit, BetDirection, BettingStep } from '../types';
+import { Balances, DailyLimit, BetDirection, BettingStep, MarketData } from '../types';
 import PriceChart from './PriceChart';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -7,12 +7,14 @@ import RefreshIcon from './icons/RefreshIcon';
 import { playSound } from '../utils/sound';
 import Tooltip from './Tooltip';
 import ConfirmationModal from './ConfirmationModal';
+import SparklineChart from './SparklineChart';
 
 interface BettingViewProps {
   priceHistory: { time: string; price: number }[];
   currentPrice: number;
   balances: Balances;
   dailyLimit: DailyLimit;
+  marketData: MarketData;
   onPlaceBet: (bet: { direction: BetDirection; amount: number; leverage: number }) => Promise<boolean>;
   isWalletConnected: boolean;
   loading: boolean;
@@ -21,7 +23,7 @@ interface BettingViewProps {
   setBettingStep: (step: BettingStep) => void;
 }
 
-const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep }) => {
+const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [betAmount, setBetAmount] = useState<string>('10');
@@ -102,15 +104,43 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
 
   const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0;
 
+  const formatVolume = (volume: number) => {
+    if (volume >= 1e9) {
+      return `$${(volume / 1e9).toFixed(2)}B`;
+    }
+    if (volume >= 1e6) {
+      return `$${(volume / 1e6).toFixed(2)}M`;
+    }
+    return `$${volume.toLocaleString()}`;
+  };
+
+  const isPriceChangePositive = marketData.priceChange24h >= 0;
+
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
-            <p className="text-sm text-brand-text">MARKET OVERVIEW</p>
-            <h2 className="text-4xl font-bold text-white mt-2">${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-            <p className="text-lg font-semibold text-brand-green">+1.5% daily</p>
+          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between h-48">
+            <div>
+              <p className="text-sm text-brand-text">MARKET OVERVIEW (BTC)</p>
+              <div className="flex justify-between items-center mt-2">
+                <div>
+                  <p 
+                    className={`text-2xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
+                  >
+                    {isPriceChangePositive ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-brand-text">24h Change</p>
+                </div>
+                <SparklineChart data={marketData.priceHistory24h} isPositive={isPriceChangePositive} />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-brand-text mt-4">24h Volume</p>
+              <p className="text-xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
+            </div>
           </div>
           <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
             <p className="text-sm text-brand-text">BTC PRICE</p>

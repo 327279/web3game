@@ -29,6 +29,12 @@ export interface DailyLimit {
   limit: number;
 }
 
+export interface MarketData {
+  volume24h: number;
+  priceChange24h: number;
+  priceHistory24h: { value: number }[];
+}
+
 export type WalletType = 'metamask' | 'okx' | 'phantom';
 
 export type BettingStep = 
