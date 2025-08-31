@@ -10,6 +10,9 @@ export const CHAD_TOKEN_ADDRESS = "0x2bb4219b8e85c111613f3ee192a115676f230d35";
 // If you don't know it, you can leave the placeholder, but leverage > 1x will fail.
 export const MON_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// The official Chain ID for the Monad Testnet. This is used to ensure the user is on the correct network.
+export const MONAD_TESTNET_CHAIN_ID = 8008135n; // Use BigInt `n` for compatibility with ethers.js
+
 export const chadFlipContractABI = [
     {"inputs":[{"internalType":"address","name":"_monTokenAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
     {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"betId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"address","name":"token","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"leverage","type":"uint256"}],"name":"BetPlaced","type":"event"},
