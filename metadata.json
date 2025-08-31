@@ -1,0 +1,5 @@
+{
+  "name": "ChadFlip Web3 Game",
+  "description": "A Web3 betting game where users can predict if the price of BTC will go up or down, with leverage. Built with React, ethers.js, and Tailwind CSS.",
+  "requestFramePermissions": []
+}

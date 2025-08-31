@@ -1,0 +1,108 @@
+import React, { useState, useEffect } from 'react';
+import { Bet } from '../types';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import ChartTooltip from './ChartTooltip';
+
+interface WaitingViewProps {
+  bet: Bet;
+  onResolution: (finalPrice: number) => void;
+}
+
+const COUNTDOWN_SECONDS = 60;
+
+const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution }) => {
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [priceHistory, setPriceHistory] = useState([{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: bet.entryPrice }]);
+
+  const currentPrice = priceHistory[priceHistory.length - 1].price;
+
+  useEffect(() => {
+    const priceInterval = setInterval(() => {
+      setPriceHistory(prev => {
+        const newPrice = prev[prev.length - 1].price + (Math.random() - 0.5) * 0.2;
+        return [...prev, { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: parseFloat(newPrice.toFixed(4)) }];
+      });
+    }, 1500);
+
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          clearInterval(priceInterval);
+          
+          setPriceHistory(currentHistory => {
+            const finalPrice = currentHistory[currentHistory.length - 1].price;
+            onResolution(finalPrice);
+            return currentHistory;
+          });
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearInterval(priceInterval);
+    };
+  }, [onResolution]);
+
+  const formatCountdown = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const isPriceUp = currentPrice > bet.entryPrice;
+  const chartColor = isPriceUp ? '#a8ff00' : '#f84339';
+
+  return (
+    <div className="flex justify-center items-center h-[70vh]">
+      <div className="w-full max-w-4xl bg-brand-gray p-8 rounded-xl border border-brand-light-gray animate-fade-in">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
+          <div className="bg-brand-dark p-4 rounded-lg">
+            <p className="text-sm text-brand-text">Countdown</p>
+            <p className="text-2xl font-bold text-white">{formatCountdown(countdown)}</p>
+          </div>
+          <div className="bg-brand-dark p-4 rounded-lg">
+            <p className="text-sm text-brand-text">Bet Size</p>
+            <p className="text-2xl font-bold text-white">{bet.amount} CHAD</p>
+          </div>
+          <div className="bg-brand-dark p-4 rounded-lg">
+            <p className="text-sm text-brand-text">Bet Entry Price</p>
+            <p className="text-2xl font-bold text-white">${bet.entryPrice.toFixed(4)}</p>
+          </div>
+          <div className="bg-brand-dark p-4 rounded-lg">
+            <p className="text-sm text-brand-text">Current BTC Price</p>
+            <p className={`text-2xl font-bold ${isPriceUp ? 'text-brand-green' : 'text-brand-red'}`}>${currentPrice.toFixed(4)}</p>
+          </div>
+        </div>
+
+        <div className="h-80 w-full animate-fade-in-slide-up">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={priceHistory}>
+              <defs>
+                <linearGradient id="waitingChartFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={chartColor} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="time" hide />
+              <YAxis domain={['dataMin - 0.2', 'dataMax + 0.2']} hide />
+              <Tooltip
+                content={<ChartTooltip priceDecimalPlaces={4} />}
+                cursor={{ stroke: chartColor, strokeWidth: 1 }}
+              />
+              <Area type="monotone" dataKey="price" stroke={chartColor} strokeWidth={3} fill="url(#waitingChartFill)" animationDuration={300} animationEasing="ease-out" />
+              <ReferenceLine y={bet.entryPrice} label={{ value: 'Entry', position: 'insideLeft', fill: '#c3c3c3' }} stroke="#c3c3c3" strokeDasharray="3 3" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-center mt-4 text-brand-text animate-pulse">Waiting for round to end...</p>
+      </div>
+    </div>
+  );
+};
+
+export default WaitingView;
