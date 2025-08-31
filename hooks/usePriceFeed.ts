@@ -80,7 +80,7 @@ const usePriceFeed = (initialPrice: number, dataPoints: number = 50) => {
       } catch (error) {
         console.warn("PriceFeed (Update):", error);
       }
-    }, 10000); // Update every 10 seconds to be gentle on the public API
+    }, 2000); // Update every 2 seconds. NOTE: Frequent calls to public APIs can lead to rate-limiting.
 
     return () => clearInterval(interval);
   }, []);
