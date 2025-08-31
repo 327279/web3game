@@ -12,6 +12,7 @@ interface ConfirmationModalProps {
     direction: BetDirection;
     amount: number;
     leverage: number;
+    duration: number;
   };
   potentialWin: number;
   collateral: number;
@@ -42,7 +43,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity animate-fade-in" aria-hidden="true" onClick={onClose}></div>
 
       {/* Modal Content */}
-      <div className="relative bg-brand-gray border border-brand-light-gray rounded-xl shadow-lg transform transition-all animate-scale-in w-full max-w-md p-8">
+      <div className="relative bg-brand-gray border border-brand-light-gray rounded-xl shadow-lg transform transition-all animate-scale-in w-full max-w-md p-6 sm:p-8">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-bold text-white" id="modal-title">Confirm Your Bet</h3>
           <button onClick={onClose} disabled={isProcessing} className="text-gray-400 hover:text-white text-3xl leading-none disabled:opacity-50">&times;</button>

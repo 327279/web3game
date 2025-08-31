@@ -9,10 +9,8 @@ interface WaitingViewProps {
   currentPrice: number;
 }
 
-const COUNTDOWN_SECONDS = 60;
-
 const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPrice }) => {
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [countdown, setCountdown] = useState(bet.duration);
   const [priceHistory, setPriceHistory] = useState([{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: bet.entryPrice }]);
 
   const latestChartPrice = priceHistory[priceHistory.length - 1].price;
@@ -61,23 +59,23 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
 
   return (
     <div className="flex justify-center items-center h-[70vh]">
-      <div className="w-full max-w-4xl bg-brand-gray p-8 rounded-xl border border-brand-light-gray animate-fade-in">
+      <div className="w-full max-w-4xl bg-brand-gray p-4 sm:p-8 rounded-xl border border-brand-light-gray animate-fade-in">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
           <div className="bg-brand-dark p-4 rounded-lg">
             <p className="text-sm text-brand-text">Countdown</p>
-            <p className="text-2xl font-bold text-white">{formatCountdown(countdown)}</p>
+            <p className="text-xl md:text-2xl font-bold text-white">{formatCountdown(countdown)}</p>
           </div>
           <div className="bg-brand-dark p-4 rounded-lg">
             <p className="text-sm text-brand-text">Bet Size</p>
-            <p className="text-2xl font-bold text-white">{bet.amount} CHAD</p>
+            <p className="text-xl md:text-2xl font-bold text-white">{bet.amount} CHAD</p>
           </div>
           <div className="bg-brand-dark p-4 rounded-lg">
             <p className="text-sm text-brand-text">Bet Entry Price</p>
-            <p className="text-2xl font-bold text-white">${bet.entryPrice.toFixed(4)}</p>
+            <p className="text-xl md:text-2xl font-bold text-white">${bet.entryPrice.toFixed(4)}</p>
           </div>
           <div className="bg-brand-dark p-4 rounded-lg">
             <p className="text-sm text-brand-text">Current BTC Price</p>
-            <p className={`text-2xl font-bold ${isPriceUp ? 'text-brand-green' : 'text-brand-red'}`}>${currentPrice.toFixed(4)}</p>
+            <p className={`text-xl md:text-2xl font-bold ${isPriceUp ? 'text-brand-green' : 'text-brand-red'}`}>${currentPrice.toFixed(4)}</p>
           </div>
         </div>
 

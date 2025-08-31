@@ -12,6 +12,7 @@ export interface Bet {
   amount: number;
   leverage: number;
   entryPrice: number;
+  duration: number;
 }
 
 export interface BetResult {

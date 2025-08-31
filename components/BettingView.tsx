@@ -15,7 +15,7 @@ interface BettingViewProps {
   balances: Balances;
   dailyLimit: DailyLimit;
   marketData: MarketData;
-  onPlaceBet: (bet: { direction: BetDirection; amount: number; leverage: number }) => Promise<boolean>;
+  onPlaceBet: (bet: { direction: BetDirection; amount: number; leverage: number; duration: number; }) => Promise<boolean>;
   isWalletConnected: boolean;
   loading: boolean;
   error: string | null;
@@ -26,6 +26,7 @@ interface BettingViewProps {
 const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
+  const [duration, setDuration] = useState<number>(60);
   const [betAmount, setBetAmount] = useState<string>('10');
   const [displayError, setDisplayError] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   }, [error]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [betToConfirm, setBetToConfirm] = useState<{ direction: BetDirection, amount: number, leverage: number} | null>(null);
+  const [betToConfirm, setBetToConfirm] = useState<{ direction: BetDirection, amount: number, leverage: number, duration: number} | null>(null);
 
   const potentialWin = useMemo(() => {
     const amount = parseFloat(betAmount);
@@ -75,7 +76,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
         return;
     }
     
-    setBetToConfirm({ direction, amount, leverage });
+    setBetToConfirm({ direction, amount, leverage, duration });
     setBettingStep('confirming');
     setIsModalOpen(true);
   };
@@ -123,6 +124,12 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
       playSound('click');
       setLeverage(newLeverage);
       handleUserInteraction();
+  };
+
+  const handleDurationChange = (newDuration: number) => {
+    playSound('click');
+    setDuration(newDuration);
+    handleUserInteraction();
   };
 
   const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0;
@@ -208,8 +215,8 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
         </div>
         
         {/* Right Column */}
-        <div className="lg:col-span-2 bg-brand-gray p-8 rounded-xl border border-brand-light-gray flex flex-col items-center">
-          <h2 className="text-3xl font-black text-brand-green tracking-widest mb-6" style={{textShadow: '0 0 8px #a8ff00'}}>PLACE YOUR BET</h2>
+        <div className="lg:col-span-2 bg-brand-gray p-4 sm:p-6 lg:p-8 rounded-xl border border-brand-light-gray flex flex-col items-center">
+          <h2 className="text-2xl md:text-3xl font-black text-brand-green tracking-widest mb-6" style={{textShadow: '0 0 8px #a8ff00'}}>PLACE YOUR BET</h2>
 
           <div className="grid grid-cols-2 gap-4 w-full max-w-md">
               <button 
@@ -234,6 +241,19 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                   {[1, 2, 5, 10].map(val => (
                       <button key={val} onClick={() => handleLeverageChange(val)} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
                           {val}x
+                      </button>
+                  ))}
+              </div>
+          </div>
+
+          <div className="w-full max-w-md mt-6">
+              <Tooltip text="The duration of the bet round. The outcome is determined at the end of this countdown.">
+                <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">DURATION</p>
+              </Tooltip>
+              <div className="grid grid-cols-4 gap-2">
+                  {[15, 30, 45, 60].map(val => (
+                      <button key={val} onClick={() => handleDurationChange(val)} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${duration === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
+                          {val}s
                       </button>
                   ))}
               </div>
