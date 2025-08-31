@@ -80,14 +80,31 @@ const useWeb3 = () => {
         setLoading(true);
         const userAddress = await currentSigner.getAddress();
         
-        const [chadBalance, monBalance, dailyBetUsed, dailyBetLimit, chadDecimals, monDecimals] = await Promise.all([
+        // Fetch essential data that should not fail
+        const [chadBalance, dailyBetUsed, dailyBetLimit, chadDecimals] = await Promise.all([
             chad.balanceOf(userAddress),
-            mon.balanceOf(userAddress),
             chadFlip.dailyBetAmount(userAddress),
             chadFlip.dailyBetLimit(),
             chad.decimals(),
-            mon.decimals()
         ]);
+
+        let monBalance: bigint = BigInt(0);
+        let monDecimals: bigint = BigInt(18); // Default to 18 decimals
+
+        // Conditionally fetch MON data to avoid errors with placeholder address
+        if (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+            try {
+                const [fetchedMonBalance, fetchedMonDecimals] = await Promise.all([
+                    mon.balanceOf(userAddress),
+                    mon.decimals()
+                ]);
+                monBalance = fetchedMonBalance;
+                monDecimals = fetchedMonDecimals;
+            } catch (monError) {
+                console.warn("Could not fetch MON token data. Functionality requiring MON (e.g., leverage > 1x) may be unavailable.", monError);
+                // Balances will default to 0, which is fine.
+            }
+        }
         
         const decimals = {
             chad: Number(chadDecimals),
@@ -100,11 +117,11 @@ const useWeb3 = () => {
             mon: formatBalance(monBalance, decimals.mon),
         });
         setDailyLimit({
-            used: formatBalance(dailyBetUsed, decimals.chad), // Daily bet is in CHAD
+            used: formatBalance(dailyBetUsed, decimals.chad),
             limit: formatBalance(dailyBetLimit, decimals.chad),
         });
     } catch (e) {
-        console.error("Error fetching contract data:", e);
+        console.error("Error fetching primary contract data:", e);
         setError("Failed to fetch account data. Make sure contract addresses in constants.ts are correct and you are on the right network.");
     } finally {
         setLoading(false);
@@ -113,7 +130,7 @@ const useWeb3 = () => {
 
   const connectWallet = useCallback(async (walletType: WalletType) => {
     setError(null);
-    if (CHADFLIP_CONTRACT_ADDRESS.includes('...') || CHAD_TOKEN_ADDRESS.includes('...') || MON_TOKEN_ADDRESS.includes('...')) {
+    if (CHADFLIP_CONTRACT_ADDRESS.includes('...') || CHAD_TOKEN_ADDRESS.includes('...')) {
         setError("Contract addresses are not configured. Please update constants.ts");
         return;
     }
