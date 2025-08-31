@@ -1,3 +1,11 @@
+
+// ===================================================================================
+// === IMPORTANT: GET YOUR PROJECT ID FROM CLOUD.WALLETCONNECT.COM ===
+// ===================================================================================
+export const WALLETCONNECT_PROJECT_ID = '8f6bb6cc7777e497f917e996e40a11ac';
+// ===================================================================================
+
+
 // ===================================================================================
 // === YOUR NEW, CORRECT SMART CONTRACT ADDRESS IS NOW HERE ===
 // ===================================================================================
@@ -12,10 +20,10 @@ export const MON_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // --- Monad Testnet Configuration ---
 // The official Chain ID for the Monad Testnet. This is used to ensure the user is on the correct network.
-export const MONAD_TESTNET_CHAIN_ID = 8008135n; // Use BigInt `n` for compatibility with ethers.js
-export const MONAD_TESTNET_HEX_CHAIN_ID = '0x7A6963';
+export const MONAD_TESTNET_CHAIN_ID = 10143n; // Use BigInt `n` for compatibility with ethers.js
+export const MONAD_TESTNET_HEX_CHAIN_ID = '0x279f';
 
-// Configuration object for wallet_addEthereumChain RPC call
+// Configuration object for wallet_addEthereumChain RPC call, compatible with Web3Modal
 export const MONAD_TESTNET_CONFIG = {
     chainId: MONAD_TESTNET_HEX_CHAIN_ID,
     chainName: 'Monad Testnet',
@@ -24,8 +32,8 @@ export const MONAD_TESTNET_CONFIG = {
         symbol: 'MON',
         decimals: 18,
     },
-    rpcUrls: ['https://devnet.monad.xyz/'],
-    blockExplorerUrls: [], // No official explorer link available yet
+    rpcUrls: ['https://testnet-rpc.monad.xyz'],
+    blockExplorerUrls: ['https://testnet.monadexplorer.com'],
 };
 
 

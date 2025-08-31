@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Balances, DailyLimit, BetDirection, BettingStep, MarketData } from '../types';
 import PriceChart from './PriceChart';
 import ArrowUpIcon from './icons/ArrowUpIcon';
@@ -27,7 +27,12 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [betAmount, setBetAmount] = useState<string>('10');
-  const [clientError, setClientError] = useState<string | null>(null);
+  const [displayError, setDisplayError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // When a new error comes from the hook, display it.
+    setDisplayError(error);
+  }, [error]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [betToConfirm, setBetToConfirm] = useState<{ direction: BetDirection, amount: number, leverage: number} | null>(null);
@@ -48,25 +53,25 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
 
   const initiatePlaceBet = () => {
     playSound('click');
-    setClientError(null);
+    setDisplayError(null);
     const amount = parseFloat(betAmount);
     
     // Client-side validation
     if (isNaN(amount) || amount <= 0) {
-        setClientError("Please enter a valid bet amount.");
+        setDisplayError("Please enter a valid bet amount.");
         return;
     }
     if (amount > balances.chad) {
-        setClientError("Bet amount exceeds your CHAD balance.");
+        setDisplayError("Bet amount exceeds your CHAD balance.");
         return;
     }
     if (leverage > 1 && collateralRequired > balances.mon) {
-        setClientError(`Insufficient MON. You need ${collateralRequired.toFixed(2)} MON for collateral.`);
+        setDisplayError(`Insufficient MON. You need ${collateralRequired.toFixed(2)} MON for collateral.`);
         return;
     }
     const totalBetToday = dailyLimit.used + amount;
     if (totalBetToday > dailyLimit.limit) {
-        setClientError(`This bet would exceed your daily limit of ${dailyLimit.limit} CHAD.`);
+        setDisplayError(`This bet would exceed your daily limit of ${dailyLimit.limit} CHAD.`);
         return;
     }
     
@@ -89,18 +94,36 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
       setIsModalOpen(false);
       setBettingStep('idle');
   };
+  
+  const handleUserInteraction = () => {
+      if (displayError) {
+          setDisplayError(null);
+      }
+  };
 
   const setAmountByPercentage = (percentage: number) => {
     playSound('click');
     const newAmount = balances.chad * (percentage / 100);
     setBetAmount(newAmount.toFixed(2));
-    setClientError(null);
+    handleUserInteraction();
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setBetAmount(e.target.value);
-      setClientError(null);
+      handleUserInteraction();
   }
+  
+  const handleDirectionChange = (newDirection: BetDirection) => {
+      playSound('click');
+      setDirection(newDirection);
+      handleUserInteraction();
+  };
+
+  const handleLeverageChange = (newLeverage: number) => {
+      playSound('click');
+      setLeverage(newLeverage);
+      handleUserInteraction();
+  };
 
   const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0;
 
@@ -190,13 +213,13 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
 
           <div className="grid grid-cols-2 gap-4 w-full max-w-md">
               <button 
-                  onClick={() => { playSound('click'); setDirection('UP'); }}
+                  onClick={() => handleDirectionChange('UP')}
                   className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'UP' ? 'bg-brand-green text-black shadow-green-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}
               >
                   <ArrowUpIcon className="w-6 h-6" /> UP
               </button>
               <button 
-                  onClick={() => { playSound('click'); setDirection('DOWN'); }}
+                  onClick={() => handleDirectionChange('DOWN')}
                   className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'DOWN' ? 'bg-brand-red text-white shadow-red-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}
               >
                   <ArrowDownIcon className="w-6 h-6" /> DOWN
@@ -209,7 +232,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               </Tooltip>
               <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 5, 10].map(val => (
-                      <button key={val} onClick={() => { playSound('click'); setLeverage(val); }} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
+                      <button key={val} onClick={() => handleLeverageChange(val)} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
                           {val}x
                       </button>
                   ))}
@@ -245,14 +268,21 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
           >
               {loading ? 'Processing...' : 'PLACE BET'}
           </button>
-
-          <div className="w-full max-w-md mt-6 text-center h-10">
-              <p className="text-brand-text">Potential Win: <span className="text-brand-green font-bold">{potentialWin.toFixed(2)} CHAD</span></p>
-              {collateralRequired > 0 && <p className="text-xs text-brand-purple">({collateralRequired.toFixed(2)} MON collateral)</p>}
-              {clientError && <p className="text-brand-red mt-2">{clientError}</p>}
-              {!isWalletConnected && <p className="text-yellow-400 mt-2">Please connect your wallet to place a bet.</p>}
+          
+          <div className="w-full max-w-md mt-6 text-center min-h-[4.5rem] flex flex-col justify-center">
+            {displayError ? (
+                <div className="p-3 bg-red-900/50 border border-brand-red rounded-lg animate-fade-in">
+                    <p className="text-brand-red text-sm font-semibold">{displayError}</p>
+                </div>
+            ) : !isWalletConnected ? (
+                <p className="text-yellow-400">Please connect your wallet to place a bet.</p>
+            ) : (
+                <>
+                    <p className="text-brand-text">Potential Win: <span className="text-brand-green font-bold">{potentialWin.toFixed(2)} CHAD</span></p>
+                    {collateralRequired > 0 && <p className="text-xs text-brand-purple">({collateralRequired.toFixed(2)} MON collateral)</p>}
+                </>
+            )}
           </div>
-
         </div>
       </div>
       {betToConfirm && (

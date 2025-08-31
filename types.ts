@@ -35,8 +35,6 @@ export interface MarketData {
   priceHistory24h: { value: number }[];
 }
 
-export type WalletType = 'metamask' | 'okx' | 'phantom';
-
 export type BettingStep = 
   | 'idle'
   | 'confirming'
