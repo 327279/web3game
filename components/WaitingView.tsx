@@ -93,7 +93,7 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
               <XAxis dataKey="time" hide />
               <YAxis domain={['dataMin - 0.2', 'dataMax + 0.2']} hide />
               <Tooltip
-                content={<ChartTooltip priceDecimalPlaces={4} />}
+                content={<ChartTooltip priceDecimalPlaces={4} bet={bet} />}
                 cursor={{ stroke: chartColor, strokeWidth: 1 }}
               />
               <Area type="monotone" dataKey="price" stroke={chartColor} strokeWidth={3} fill="url(#waitingChartFill)" animationDuration={300} animationEasing="ease-out" />

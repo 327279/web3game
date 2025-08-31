@@ -1,23 +1,48 @@
 import React from 'react';
+import { Bet } from '../types';
 
 interface ChartTooltipProps {
   active?: boolean;
   payload?: any[];
   label?: string;
   priceDecimalPlaces?: number;
+  bet?: Bet | null;
 }
 
-const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, priceDecimalPlaces = 2 }) => {
+const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, priceDecimalPlaces = 2, bet }) => {
   if (active && payload && payload.length) {
     const dataPoint = payload[0];
-    const price = dataPoint.value;
+    const price = dataPoint.value as number;
     // Be more robust in finding the time. Use `label` if available, otherwise fallback to the data payload.
     const time = label || dataPoint.payload?.time;
+
+    let pnl: number | null = null;
+    if (bet) {
+        const priceWentUp = price > bet.entryPrice;
+        const playerPredictedUp = bet.direction === 'UP';
+        const isWin = (priceWentUp && playerPredictedUp) || (!priceWentUp && !playerPredictedUp);
+
+        if (price === bet.entryPrice) {
+            pnl = 0;
+        } else if (isWin) {
+            // Profit = (Bet Amount * Leverage * (1 - House Edge))
+            pnl = bet.amount * bet.leverage * 0.95;
+        } else {
+            pnl = -bet.amount;
+        }
+    }
 
     return (
       <div className="p-2 bg-brand-dark border border-brand-light-gray rounded-md shadow-lg text-sm">
         <p className="text-brand-text">{`Time: ${time}`}</p>
         <p className="font-bold text-white">{`Price: $${Number(price).toFixed(priceDecimalPlaces)}`}</p>
+        {pnl !== null && (
+            <div className={`font-bold mt-1 pt-1 border-t border-brand-light-gray ${pnl >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
+                {pnl > 0 && `Potential Win: +${pnl.toFixed(2)} CHAD`}
+                {pnl < 0 && `Potential Loss: ${pnl.toFixed(2)} CHAD`}
+                {pnl === 0 && `Break Even`}
+            </div>
+        )}
       </div>
     );
   }

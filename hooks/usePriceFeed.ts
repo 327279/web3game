@@ -6,81 +6,63 @@ interface PriceData {
   price: number;
 }
 
-const API_URL_HISTORY = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1';
-const API_URL_CURRENT = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
+// Configuration for a 15-minute data window
+const DATA_POINTS = 90; // 90 points for 15 minutes (1 point every 10 seconds)
+const TIME_INTERVAL_SECONDS = 10;
 
-const usePriceFeed = (initialPrice: number, dataPoints: number = 50) => {
+const usePriceFeed = (initialPrice: number) => {
   const [priceHistory, setPriceHistory] = useState<PriceData[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number>(initialPrice);
 
   const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Show seconds for more granular time data on the chart
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
-
-  // Fetch historical data on initial load to populate the chart
-  const fetchInitialData = useCallback(async () => {
-    try {
-      const response = await fetch(API_URL_HISTORY);
-      if (!response.ok) throw new Error('Failed to fetch historical price data');
-      const data = await response.json();
-      
-      const history: PriceData[] = data.prices.slice(-dataPoints).map((p: [number, number]) => ({
-        time: formatTime(p[0]),
-        price: parseFloat(p[1].toFixed(4)),
-      }));
-      
-      setPriceHistory(history);
-      if (history.length > 0) {
-        setCurrentPrice(history[history.length - 1].price);
-      }
-    } catch (error) {
-      console.error("PriceFeed (Initial):", error);
-      // Fallback to mock data if API fails
-      const now = new Date();
-      let price = initialPrice;
-      const mockHistory: PriceData[] = [];
-      for (let i = dataPoints - 1; i >= 0; i--) {
-        price += (Math.random() - 0.5) * 20;
-        mockHistory.push({
-          time: new Date(now.getTime() - i * 1000 * 60).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          price: parseFloat(price.toFixed(4)),
-        });
-      }
-      setPriceHistory(mockHistory);
-      if (mockHistory.length > 0) {
-        setCurrentPrice(mockHistory[mockHistory.length - 1].price);
-      }
+  
+  // Generate initial mock data for the last 15 minutes
+  const generateInitialMockData = useCallback(() => {
+    const now = new Date();
+    let price = initialPrice;
+    const mockHistory: PriceData[] = [];
+    for (let i = DATA_POINTS - 1; i >= 0; i--) {
+      // Create some realistic but random price movement, with reduced volatility for a shorter timeframe
+      price += (Math.random() - 0.5) * 5; 
+      mockHistory.push({
+        time: formatTime(now.getTime() - i * 1000 * TIME_INTERVAL_SECONDS),
+        price: parseFloat(price.toFixed(4)),
+      });
     }
-  }, [initialPrice, dataPoints]);
-
+    setPriceHistory(mockHistory);
+    if (mockHistory.length > 0) {
+      setCurrentPrice(mockHistory[mockHistory.length - 1].price);
+    }
+  }, [initialPrice]);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    generateInitialMockData();
+  }, [generateInitialMockData]);
 
-  // Fetch the latest price periodically
+  // Update with new mock data periodically
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(API_URL_CURRENT);
-        if (!response.ok) return; // Silently fail to avoid console spam on minor network issues
-        const data = await response.json();
-        const newPrice = parseFloat(data.bitcoin.usd.toFixed(4));
+    const interval = setInterval(() => {
+      setPriceHistory(prevHistory => {
+        if (prevHistory.length === 0) {
+            return prevHistory;
+        }
 
+        const lastPrice = prevHistory[prevHistory.length - 1].price;
+        // Price change for updates, make it smaller for smoother ticks
+        const newPrice = parseFloat((lastPrice + (Math.random() - 0.5) * 2).toFixed(4));
+        
         setCurrentPrice(newPrice);
-        setPriceHistory(prevHistory => {
-            if(prevHistory.length === 0) return prevHistory; // Don't update if initial data isn't there yet
-            const newHistory = [...prevHistory.slice(1), {
-                time: formatTime(Date.now()),
-                price: newPrice,
-            }];
-            return newHistory;
-        });
 
-      } catch (error) {
-        console.warn("PriceFeed (Update):", error);
-      }
-    }, 2000); // Update every 2 seconds. NOTE: Frequent calls to public APIs can lead to rate-limiting.
+        const newHistory = [...prevHistory.slice(1), {
+            time: formatTime(Date.now()),
+            price: newPrice,
+        }];
+        return newHistory;
+      });
+    }, 2000); // Update every 2 seconds
 
     return () => clearInterval(interval);
   }, []);
