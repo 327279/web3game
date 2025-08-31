@@ -34,6 +34,6 @@ const MetaMaskIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
             </g>
         </g>
     </svg>
-));
+);
 
 export default MetaMaskIcon;
