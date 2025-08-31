@@ -76,53 +76,65 @@ const useWeb3 = () => {
   };
 
   const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract, mon: ethers.Contract) => {
+    setLoading(true);
+    setError(null); // Clear previous errors on a new fetch
     try {
-        setLoading(true);
         const userAddress = await currentSigner.getAddress();
-        
-        // Fetch essential data that should not fail
-        const [chadBalance, dailyBetUsed, dailyBetLimit, chadDecimals] = await Promise.all([
-            chad.balanceOf(userAddress),
-            chadFlip.dailyBetAmount(userAddress),
-            chadFlip.dailyBetLimit(),
-            chad.decimals(),
-        ]);
+        let chadDecimals = 18; // Default value
 
-        let monBalance: bigint = BigInt(0);
-        let monDecimals: bigint = BigInt(18); // Default to 18 decimals
+        // 1. Fetch CHAD Token Data (Balance & Decimals)
+        try {
+            const [balance, decimals] = await Promise.all([
+                chad.balanceOf(userAddress),
+                chad.decimals()
+            ]);
+            chadDecimals = Number(decimals);
+            setTokenDecimals(prev => ({ ...prev, chad: chadDecimals }));
+            setBalances(prev => ({ ...prev, chad: formatBalance(balance, chadDecimals) }));
+        } catch (e) {
+            console.error("Failed to fetch CHAD token data:", e);
+            setError("Could not fetch CHAD balance. Please verify the CHAD token address and your network connection.");
+            setBalances(prev => ({ ...prev, chad: 0 }));
+        }
 
-        // Conditionally fetch MON data to avoid errors with placeholder address
+        // 2. Fetch ChadFlip Game Contract Data (Daily Limits)
+        try {
+            const [used, limit] = await Promise.all([
+                chadFlip.dailyBetAmount(userAddress),
+                chadFlip.dailyBetLimit()
+            ]);
+            // Use the fetched CHAD decimals for formatting, as limit is in CHAD
+            setDailyLimit({
+                used: formatBalance(used, chadDecimals),
+                limit: formatBalance(limit, chadDecimals),
+            });
+        } catch (e) {
+            console.error("Failed to fetch daily limit data:", e);
+            setError(prev => prev ? `${prev} And could not fetch daily limit.` : "Could not fetch daily limit. Please verify the game contract address.");
+        }
+
+        // 3. Conditionally Fetch MON Token Data
         if (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") {
             try {
-                const [fetchedMonBalance, fetchedMonDecimals] = await Promise.all([
+                const [balance, decimals] = await Promise.all([
                     mon.balanceOf(userAddress),
                     mon.decimals()
                 ]);
-                monBalance = fetchedMonBalance;
-                monDecimals = fetchedMonDecimals;
+                const monDecimalsNum = Number(decimals);
+                setTokenDecimals(prev => ({ ...prev, mon: monDecimalsNum }));
+                setBalances(prev => ({ ...prev, mon: formatBalance(balance, monDecimalsNum) }));
             } catch (monError) {
-                console.warn("Could not fetch MON token data. Functionality requiring MON (e.g., leverage > 1x) may be unavailable.", monError);
-                // Balances will default to 0, which is fine.
+                console.warn("Could not fetch MON token data. This is expected if the address is a placeholder.", monError);
+                setBalances(prev => ({ ...prev, mon: 0 }));
             }
+        } else {
+             setBalances(prev => ({ ...prev, mon: 0 }));
         }
-        
-        const decimals = {
-            chad: Number(chadDecimals),
-            mon: Number(monDecimals)
-        };
-        setTokenDecimals(decimals);
 
-        setBalances({
-            chad: formatBalance(chadBalance, decimals.chad),
-            mon: formatBalance(monBalance, decimals.mon),
-        });
-        setDailyLimit({
-            used: formatBalance(dailyBetUsed, decimals.chad),
-            limit: formatBalance(dailyBetLimit, decimals.chad),
-        });
     } catch (e) {
-        console.error("Error fetching primary contract data:", e);
-        setError("Failed to fetch account data. Make sure contract addresses in constants.ts are correct and you are on the right network.");
+        // This outer catch is for errors like `currentSigner.getAddress()` failing
+        console.error("An unexpected error occurred while fetching account data:", e);
+        setError("An unexpected error occurred while fetching account data. Please reconnect your wallet.");
     } finally {
         setLoading(false);
     }

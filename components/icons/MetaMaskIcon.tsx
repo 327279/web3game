@@ -8,7 +8,7 @@ const MetaMaskIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
                 <polygon fill="#E27625" points="53 28 60 24 60 12 53 15" />
                 <polygon fill="#E27625" points="40 28 34 24 34 12 40 15" />
                 <polygon fill="#E27625" points="60 24 65 21 65 12 60 12" />
-                <polygon fill="#E27625"points="34 24 29 21 29 12 34 12" />
+                <polygon fill="#E27625" points="34 24 29 21 29 12 34 12" />
                 <polygon fill="#E27625" points="40 40 40 51 46 54 53 51 53 40 46 44" />
                 <polygon fill="#F6851B" points="53 40 53 51 60 47 60 40" />
                 <polygon fill="#F6851B" points="40 40 40 51 34 47 34 40" />
