@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 interface PriceData {
   time: string;
@@ -10,17 +10,14 @@ interface PriceData {
 const DATA_POINTS = 90; // 90 points for 15 minutes (1 point every 10 seconds)
 const TIME_INTERVAL_SECONDS = 10;
 
-const usePriceFeed = (initialPrice: number) => {
-  const [priceHistory, setPriceHistory] = useState<PriceData[]>([]);
-  const [currentPrice, setCurrentPrice] = useState<number>(initialPrice);
+const formatTime = (timestamp: number) => {
+  // Show seconds for more granular time data on the chart
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
-  const formatTime = (timestamp: number) => {
-    // Show seconds for more granular time data on the chart
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-  
-  // Generate initial mock data for the last 15 minutes
-  const generateInitialMockData = useCallback(() => {
+// A pure function to generate the initial dataset.
+// This prevents the component from rendering with an empty array first.
+const generateInitialData = (initialPrice: number) => {
     const now = new Date();
     let price = initialPrice;
     const mockHistory: PriceData[] = [];
@@ -32,15 +29,18 @@ const usePriceFeed = (initialPrice: number) => {
         price: parseFloat(price.toFixed(4)),
       });
     }
-    setPriceHistory(mockHistory);
-    if (mockHistory.length > 0) {
-      setCurrentPrice(mockHistory[mockHistory.length - 1].price);
-    }
-  }, [initialPrice]);
+    const currentPrice = mockHistory.length > 0 ? mockHistory[mockHistory.length - 1].price : initialPrice;
+    return { history: mockHistory, currentPrice };
+}
 
-  useEffect(() => {
-    generateInitialMockData();
-  }, [generateInitialMockData]);
+
+const usePriceFeed = (initialPrice: number) => {
+  // Use the lazy initializer form of useState to generate data only on the first render.
+  // This avoids the "render with empty array" problem that caused the crash.
+  const [initialData] = useState(() => generateInitialData(initialPrice));
+
+  const [priceHistory, setPriceHistory] = useState<PriceData[]>(initialData.history);
+  const [currentPrice, setCurrentPrice] = useState<number>(initialData.currentPrice);
 
   // Update with new mock data periodically
   useEffect(() => {
