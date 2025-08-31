@@ -79,85 +79,72 @@ const useWeb3 = () => {
     setLoading(true);
     setError(null);
     try {
-        const userAddress = await currentSigner.getAddress();
+      const userAddress = await currentSigner.getAddress();
+      
+      const errors: string[] = [];
+      let chadDecimals = 18; // Default
+      
+      // Create containers for the new data
+      const newBalances: Balances = { chad: 0, mon: 0 };
+      const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
+      const newDecimals = { chad: 18, mon: 18 };
 
-        const results = await Promise.allSettled([
-            // 0: CHAD decimals
-            chad.decimals(),
-            // 1: CHAD balance
-            chad.balanceOf(userAddress),
-            // 2: Daily amount used
-            chadFlip.dailyBetAmount(userAddress),
-            // 3: Daily limit
-            chadFlip.dailyBetLimit(),
-            // 4: MON decimals
-            (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") ? mon.decimals() : Promise.resolve(null),
-            // 5: MON balance
-            (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") ? mon.balanceOf(userAddress) : Promise.resolve(null),
-        ]);
+      // 1. Fetch CHAD Decimals (critical for other calculations)
+      try {
+          const decimals = await chad.decimals();
+          chadDecimals = Number(decimals);
+          newDecimals.chad = chadDecimals;
+      } catch (e) {
+          console.error("Failed to fetch CHAD decimals:", e);
+          errors.push("Could not get CHAD token info.");
+      }
+      
+      // 2. Fetch CHAD Balance
+      try {
+          const balance = await chad.balanceOf(userAddress);
+          newBalances.chad = formatBalance(balance, chadDecimals);
+      } catch (e) {
+          console.error("Failed to fetch CHAD balance:", e);
+          errors.push("Could not fetch CHAD balance.");
+      }
+      
+      // 3. Fetch Daily Limit data
+      try {
+          const limit = await chadFlip.dailyBetLimit();
+          newDailyLimit.limit = formatBalance(limit, chadDecimals);
+          const used = await chadFlip.dailyBetAmount(userAddress);
+          newDailyLimit.used = formatBalance(used, chadDecimals);
+      } catch (e) {
+          console.error("Failed to fetch daily limit data:", e);
+          errors.push("Could not fetch daily limit.");
+      }
 
-        const newBalances: Balances = { chad: 0, mon: 0 };
-        const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
-        const newDecimals = { chad: 18, mon: 18 };
-        const errors: string[] = [];
+      // 4. Fetch MON data
+      if (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+          try {
+              const decimals = await mon.decimals();
+              newDecimals.mon = Number(decimals);
+              const balance = await mon.balanceOf(userAddress);
+              newBalances.mon = formatBalance(balance, newDecimals.mon);
+          } catch (e) {
+              console.warn("Could not fetch MON data:", e);
+          }
+      }
+      
+      // 5. Update state
+      setTokenDecimals(newDecimals);
+      setBalances(newBalances);
+      setDailyLimit(newDailyLimit);
 
-        // Process CHAD Data
-        let chadDecimals = 18;
-        const chadDecimalsResult = results[0];
-        if (chadDecimalsResult.status === 'fulfilled') {
-            chadDecimals = Number(chadDecimalsResult.value);
-            newDecimals.chad = chadDecimals;
-        } else {
-            console.error("Failed to fetch CHAD decimals:", chadDecimalsResult.reason);
-            errors.push("Could not get CHAD token info.");
-        }
+      if (errors.length > 0) {
+          setError(errors.join(' '));
+      }
 
-        const chadBalanceResult = results[1];
-        if (chadBalanceResult.status === 'fulfilled') {
-            newBalances.chad = formatBalance(chadBalanceResult.value, chadDecimals);
-        } else {
-            console.error("Failed to fetch CHAD balance:", chadBalanceResult.reason);
-            errors.push("Could not fetch CHAD balance.");
-        }
-        
-        // Process Daily Limit Data
-        const usedResult = results[2];
-        const limitResult = results[3];
-        if (usedResult.status === 'fulfilled' && limitResult.status === 'fulfilled') {
-            newDailyLimit.used = formatBalance(usedResult.value, chadDecimals);
-            newDailyLimit.limit = formatBalance(limitResult.value, chadDecimals);
-        } else {
-            if (usedResult.status === 'rejected') console.error("Failed to fetch daily used amount:", usedResult.reason);
-            if (limitResult.status === 'rejected') console.error("Failed to fetch daily limit:", limitResult.reason);
-            errors.push("Could not fetch daily limit.");
-        }
-
-        // Process MON Data
-        if (results[4].status === 'fulfilled' && results[4].value !== null) {
-            const monDecimals = Number(results[4].value);
-            newDecimals.mon = monDecimals;
-            const monBalanceResult = results[5];
-            if (monBalanceResult.status === 'fulfilled' && monBalanceResult.value !== null) {
-                newBalances.mon = formatBalance(monBalanceResult.value, monDecimals);
-            } else if (monBalanceResult.status === 'rejected') {
-                 console.warn("Could not fetch MON balance.", monBalanceResult.reason);
-            }
-        } else if(results[4].status === 'rejected') {
-            console.warn("Could not fetch MON decimals.", results[4].reason);
-        }
-        
-        setTokenDecimals(newDecimals);
-        setBalances(newBalances);
-        setDailyLimit(newDailyLimit);
-
-        if (errors.length > 0) {
-            setError(errors.join(' '));
-        }
     } catch (e) {
-        console.error("An unexpected error occurred while fetching account data:", e);
-        setError("An unexpected error occurred while fetching account data. Please reconnect your wallet.");
+      console.error("An unexpected error occurred while fetching account data:", e);
+      setError("An unexpected error occurred while fetching account data.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, []);
 
