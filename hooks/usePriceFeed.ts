@@ -26,7 +26,7 @@ const usePriceFeed = (initialPrice: number, dataPoints: number = 50) => {
       
       const history: PriceData[] = data.prices.slice(-dataPoints).map((p: [number, number]) => ({
         time: formatTime(p[0]),
-        price: parseFloat(p[1].toFixed(2)),
+        price: parseFloat(p[1].toFixed(4)),
       }));
       
       setPriceHistory(history);
@@ -43,7 +43,7 @@ const usePriceFeed = (initialPrice: number, dataPoints: number = 50) => {
         price += (Math.random() - 0.5) * 20;
         mockHistory.push({
           time: new Date(now.getTime() - i * 1000 * 60).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          price: parseFloat(price.toFixed(2)),
+          price: parseFloat(price.toFixed(4)),
         });
       }
       setPriceHistory(mockHistory);
@@ -65,7 +65,7 @@ const usePriceFeed = (initialPrice: number, dataPoints: number = 50) => {
         const response = await fetch(API_URL_CURRENT);
         if (!response.ok) return; // Silently fail to avoid console spam on minor network issues
         const data = await response.json();
-        const newPrice = parseFloat(data.bitcoin.usd.toFixed(2));
+        const newPrice = parseFloat(data.bitcoin.usd.toFixed(4));
 
         setCurrentPrice(newPrice);
         setPriceHistory(prevHistory => {

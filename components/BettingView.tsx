@@ -144,7 +144,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
           </div>
           <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
             <p className="text-sm text-brand-text">BTC PRICE</p>
-            <p className="text-2xl font-bold text-white mb-2">${currentPrice.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-white mb-2">${currentPrice.toFixed(4)}</p>
             <PriceChart data={priceHistory} currentPrice={currentPrice} />
           </div>
           <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">

@@ -39,17 +39,18 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, currentPrice }) => {
                         axisLine={false} 
                         domain={[minPrice - domainMargin, maxPrice + domainMargin]}
                         orientation="right"
-                        tickFormatter={(value) => `$${Number(value).toFixed(2)}`}
+                        tickFormatter={(value) => `$${Number(value).toFixed(4)}`}
                     />
                     <Tooltip
-                        content={<ChartTooltip />}
+                        content={<ChartTooltip priceDecimalPlaces={4} />}
                         cursor={{ stroke: '#a8ff00', strokeWidth: 1, strokeDasharray: '3 3' }}
                     />
                     <Area type="monotone" dataKey="price" stroke="#a8ff00" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" animationDuration={300} animationEasing="ease-out" />
                     <ReferenceLine 
                         y={currentPrice} 
-                        stroke="#f84339"
-                        strokeWidth={1.5}
+                        stroke="#a8ff00"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
                         label={<CurrentPriceLabel />}
                     />
                 </AreaChart>

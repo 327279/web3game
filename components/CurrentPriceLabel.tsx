@@ -9,33 +9,25 @@ const CurrentPriceLabel: React.FC<CurrentPriceLabelProps> = ({ viewBox, value })
   if (!viewBox) return null;
 
   const { x, y, width } = viewBox;
-  const priceText = typeof value === 'number' ? `$${value.toFixed(2)}` : value;
+  const priceText = typeof value === 'number' ? `$${value.toFixed(4)}` : value;
 
-  const circleCx = x + width;
-  const circleCy = y;
-  const textX = x + width + 15;
+  const ballCx = x + width;
+  const ballCy = y;
+  
+  const textX = ballCx + 12;
   const textY = y;
 
   return (
     <g>
-      <circle
-        cx={circleCx}
-        cy={circleCy}
-        r="5"
-        fill="#f84339"
-        className="animate-pulse-indicator"
-      />
-      <circle
-        cx={circleCx}
-        cy={circleCy}
-        r="3"
-        fill="#f84339"
-      />
+      <circle cx={ballCx} cy={ballCy} r="5" fill="#a8ff00" stroke="#131313" strokeWidth="2">
+        <animate attributeName="r" from="5" to="8" dur="1.5s" begin="0s" repeatCount="indefinite" />
+        <animate attributeName="opacity" from="1" to="0.3" dur="1.5s" begin="0s" repeatCount="indefinite" />
+      </circle>
       <text
         x={textX}
         y={textY}
         dy={4}
-        fill="#f84339"
+        fill="#a8ff00"
         fontSize="12"
         fontWeight="bold"
         textAnchor="start"
