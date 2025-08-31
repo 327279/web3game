@@ -50,30 +50,30 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </div>
         
         <div className="space-y-4">
-            <div className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-3xl ${direction === 'UP' ? 'bg-brand-green text-black' : 'bg-brand-red text-white'}`}>
-                {direction === 'UP' ? <ArrowUpIcon className="w-8 h-8"/> : <ArrowDownIcon className="w-8 h-8" />}
+            <div className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl sm:text-3xl ${direction === 'UP' ? 'bg-brand-green text-black' : 'bg-brand-red text-white'}`}>
+                {direction === 'UP' ? <ArrowUpIcon className="w-7 h-7 sm:w-8 sm:h-8"/> : <ArrowDownIcon className="w-7 h-7 sm:w-8 sm:h-8" />}
                 {direction}
             </div>
             
             <div className="bg-brand-dark p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-baseline">
                     <span className="text-brand-text">Bet Amount:</span>
-                    <span className="text-white font-bold text-lg">{amount.toFixed(2)} CHAD</span>
+                    <span className="text-white font-bold text-base sm:text-lg">{amount.toFixed(2)} CHAD</span>
                 </div>
                 <div className="flex justify-between items-baseline">
                     <span className="text-brand-text">Leverage:</span>
-                    <span className="text-white font-bold text-lg">{leverage}x</span>
+                    <span className="text-white font-bold text-base sm:text-lg">{leverage}x</span>
                 </div>
                  {collateral > 0 && (
                     <div className="flex justify-between items-baseline">
                         <span className="text-brand-text">Collateral:</span>
-                        <span className="text-brand-purple font-bold text-lg">{collateral.toFixed(2)} MON</span>
+                        <span className="text-brand-purple font-bold text-base sm:text-lg">{collateral.toFixed(2)} MON</span>
                     </div>
                  )}
                 <div className="border-t border-brand-light-gray my-2"></div>
                 <div className="flex justify-between items-baseline">
-                    <span className="text-brand-text text-lg">Potential Win:</span>
-                    <span className="text-brand-green font-bold text-2xl">{potentialWin.toFixed(2)} CHAD</span>
+                    <span className="text-brand-text sm:text-lg">Potential Win:</span>
+                    <span className="text-brand-green font-bold text-xl sm:text-2xl">{potentialWin.toFixed(2)} CHAD</span>
                 </div>
             </div>
 

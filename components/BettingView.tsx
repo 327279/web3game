@@ -152,7 +152,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between h-48">
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between h-48">
             <div>
               <p className="text-sm text-brand-text">MARKET OVERVIEW (BTC)</p>
               <div className="flex justify-between items-center mt-2">
@@ -172,42 +172,42 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               <p className="text-xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
             </div>
           </div>
-          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
             <p className="text-sm text-brand-text">BTC PRICE</p>
             <p className="text-2xl font-bold text-white mb-2">${currentPrice.toFixed(4)}</p>
             <PriceChart data={priceHistory} currentPrice={currentPrice} />
           </div>
-          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
              <p className="text-sm text-brand-text mb-4">YOUR ASSETS</p>
              <div className="flex justify-around">
                  <div className="text-center">
-                     <div className="relative w-24 h-24 flex items-center justify-center">
+                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
                          <svg className="w-full h-full" viewBox="0 0 36 36">
                              <path className="text-brand-light-gray" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
                              <path className="text-brand-green" stroke="currentColor" strokeWidth="3" fill="none" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
                          </svg>
-                         <span className="absolute text-white font-bold text-lg">{balances.chad.toFixed(2)}</span>
+                         <span className="absolute text-white font-bold text-base sm:text-lg">{balances.chad.toFixed(2)}</span>
                      </div>
                      <p className="mt-2 text-white font-semibold">CHAD</p>
                  </div>
                  <div className="text-center text-brand-purple">
-                    <div className="relative w-24 h-24 flex items-center justify-center">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
                           <div className="w-full h-full rounded-full border-2 border-dashed border-brand-purple flex items-center justify-center">
-                             <span className="text-white font-bold text-lg">{balances.mon.toFixed(2)}</span>
+                             <span className="text-white font-bold text-base sm:text-lg">{balances.mon.toFixed(2)}</span>
                           </div>
                      </div>
                      <p className="mt-2 font-semibold">MON</p>
                  </div>
              </div>
           </div>
-          <div className="bg-brand-gray p-6 rounded-xl border border-brand-light-gray">
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
               <Tooltip text="This is the maximum amount of CHAD you can bet in a 24-hour period. It resets daily.">
                   <div className="flex justify-between items-center cursor-help">
                       <p className="text-sm text-brand-text">Daily Bet Limit</p>
                       <button className="text-brand-text hover:text-white transition transform hover:scale-110" onClick={() => playSound('click')}><RefreshIcon className="w-4 h-4" /></button>
                   </div>
               </Tooltip>
-              <p className="text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
               <div className="w-full bg-brand-light-gray rounded-full h-2.5 mt-2">
                   <div className="bg-brand-green h-2.5 rounded-full" style={{ width: `${(dailyLimit.used / dailyLimit.limit) * 100}%` }}></div>
               </div>

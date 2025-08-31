@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bet } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import ChartTooltip from './ChartTooltip';
@@ -12,8 +12,15 @@ interface WaitingViewProps {
 const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPrice }) => {
   const [countdown, setCountdown] = useState(bet.duration);
   const [priceHistory, setPriceHistory] = useState([{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: bet.entryPrice }]);
+  
+  // Use a ref to store the latest currentPrice without causing re-renders or effect re-runs.
+  const latestPriceRef = useRef(currentPrice);
+  useEffect(() => {
+      latestPriceRef.current = currentPrice;
+  }, [currentPrice]);
 
-  const latestChartPrice = priceHistory[priceHistory.length - 1].price;
+
+  const latestChartPrice = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1].price : bet.entryPrice;
 
   // This effect updates the chart history whenever a new price comes from the parent
   useEffect(() => {
@@ -29,14 +36,15 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
     }
   }, [currentPrice, latestChartPrice]);
 
-  // This effect handles the countdown and final resolution
+  // This effect handles the countdown and final resolution.
+  // It should only run once on mount to set up the interval.
   useEffect(() => {
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
-          // Use the absolute latest price from the prop for resolution
-          onResolution(currentPrice);
+          // Use the absolute latest price from the ref for resolution.
+          onResolution(latestPriceRef.current);
           return 0;
         }
         return prev - 1;
@@ -46,7 +54,9 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
     return () => {
       clearInterval(countdownInterval);
     };
-  }, [onResolution, currentPrice]);
+  // The dependency array is empty on purpose so this effect only runs once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const formatCountdown = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -79,7 +89,7 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
           </div>
         </div>
 
-        <div className="h-80 w-full animate-fade-in-slide-up">
+        <div className="h-64 sm:h-80 w-full animate-fade-in-slide-up">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={priceHistory}>
               <defs>

@@ -14,7 +14,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, currentPrice }) => {
     const domainMargin = (maxPrice - minPrice) * 0.1;
 
     return (
-        <div className="h-64 w-full animate-fade-in-slide-up">
+        <div className="h-56 sm:h-64 w-full animate-fade-in-slide-up">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>

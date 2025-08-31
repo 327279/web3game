@@ -148,7 +148,7 @@ const useWeb3 = () => {
     }
   }, []);
 
-  // Effect to initialize provider, signer, and contracts when wallet connects
+  // Effect to initialize provider, signer, and contracts when wallet connects or disconnects
   useEffect(() => {
     const setup = async () => {
       if (isConnected && walletProvider && address && chainId === Number(MONAD_TESTNET_CHAIN_ID)) {
@@ -168,7 +168,15 @@ const useWeb3 = () => {
         await fetchContractData(currentSigner, chadFlip, chad, mon);
       } else if (isConnected && chainId !== Number(MONAD_TESTNET_CHAIN_ID)) {
         setError("Wrong network. Please switch to Monad Testnet in your wallet.");
-        // Web3Modal's UI will also show a 'Switch Network' button.
+      } else {
+        // Handle disconnection: clear all web3 state
+        setError(null);
+        setSigner(null);
+        setChadFlipContract(null);
+        setChadTokenContract(null);
+        setMonTokenContract(null);
+        setBalances({chad: 0, mon: 0});
+        setDailyLimit({used: 0, limit: 5000});
       }
     };
     setup();
@@ -181,13 +189,6 @@ const useWeb3 = () => {
 
   const disconnect = useCallback(() => {
       w3mDisconnect();
-      // State reset will be handled by the useEffect watching isConnected
-      setSigner(null);
-      setChadFlipContract(null);
-      setChadTokenContract(null);
-      setMonTokenContract(null);
-      setBalances({chad: 0, mon: 0});
-      setDailyLimit({used: 0, limit: 5000});
   }, [w3mDisconnect]);
   
   const refreshData = useCallback(() => {
