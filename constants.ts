@@ -10,8 +10,24 @@ export const CHAD_TOKEN_ADDRESS = "0x2bb4219b8e85c111613f3ee192a115676f230d35";
 // If you don't know it, you can leave the placeholder, but leverage > 1x will fail.
 export const MON_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// --- Monad Testnet Configuration ---
 // The official Chain ID for the Monad Testnet. This is used to ensure the user is on the correct network.
 export const MONAD_TESTNET_CHAIN_ID = 8008135n; // Use BigInt `n` for compatibility with ethers.js
+export const MONAD_TESTNET_HEX_CHAIN_ID = '0x7A6963';
+
+// Configuration object for wallet_addEthereumChain RPC call
+export const MONAD_TESTNET_CONFIG = {
+    chainId: MONAD_TESTNET_HEX_CHAIN_ID,
+    chainName: 'Monad Testnet',
+    nativeCurrency: {
+        name: 'MON',
+        symbol: 'MON',
+        decimals: 18,
+    },
+    rpcUrls: ['https://devnet.monad.xyz/'],
+    blockExplorerUrls: [], // No official explorer link available yet
+};
+
 
 export const chadFlipContractABI = [
     {"inputs":[{"internalType":"address","name":"_monTokenAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},

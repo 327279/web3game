@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { Balances, DailyLimit, Bet, WalletType, BettingStep } from '../types';
-import { CHADFLIP_CONTRACT_ADDRESS, CHAD_TOKEN_ADDRESS, MON_TOKEN_ADDRESS, MONAD_TESTNET_CHAIN_ID, chadFlipContractABI, erc20ABI } from '../constants';
+import { 
+    CHADFLIP_CONTRACT_ADDRESS, 
+    CHAD_TOKEN_ADDRESS, 
+    MON_TOKEN_ADDRESS, 
+    MONAD_TESTNET_CHAIN_ID, 
+    MONAD_TESTNET_CONFIG,
+    MONAD_TESTNET_HEX_CHAIN_ID,
+    chadFlipContractABI, 
+    erc20ABI 
+} from '../constants';
 
 // Add type definitions for various wallet providers on the window object.
 declare global {
@@ -14,47 +23,29 @@ declare global {
 
 /**
  * Parses a blockchain transaction error and returns a user-friendly message.
- * @param error The error object caught from ethers.js.
- * @returns A string containing a user-friendly error message.
  */
 const parseBlockchainError = (error: any): string => {
-  // Ethers v6 specific error for user rejected transaction
   if (error.code === 'ACTION_REJECTED') {
     return 'You rejected the transaction.';
   }
-
-  // Check for revert reason from the contract
   if (error.reason) {
     const reason = error.reason.toLowerCase();
-    if (reason.includes('insufficient balance')) {
-      return 'Insufficient CHAD balance.';
-    }
-    if (reason.includes('daily limit exceeded')) {
-      return 'Daily betting limit exceeded.';
-    }
-    // A more specific check for insufficient collateral
-    if (reason.includes('erc20: transfer amount exceeds balance')) {
-      return 'Insufficient MON balance for collateral.';
-    }
-    // Return the reason directly if it's a custom message we haven't parsed
+    if (reason.includes('insufficient balance')) return 'Insufficient CHAD balance.';
+    if (reason.includes('daily limit exceeded')) return 'Daily betting limit exceeded.';
+    if (reason.includes('erc20: transfer amount exceeds balance')) return 'Insufficient MON balance for collateral.';
     return `Transaction failed: ${error.reason}`;
   }
-
-  // Generic message for other types of errors
   if (error.message) {
     const message = error.message.toLowerCase();
-    if (message.includes('user denied')) {
-        return 'You rejected the transaction.';
-    }
-    if (message.includes('insufficient funds')) {
-        return 'Insufficient funds for gas fee.';
-    }
+    if (message.includes('user denied')) return 'You rejected the transaction.';
+    if (message.includes('insufficient funds')) return 'Insufficient funds for gas fee.';
   }
-
   return 'Transaction failed. Please check the console for details.';
 };
 
-
+/**
+ * A hook to manage all Web3 interactions, including wallet connection, network management, and smart contract interactions.
+ */
 const useWeb3 = () => {
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [rawProvider, setRawProvider] = useState<any | null>(null);
@@ -75,150 +66,154 @@ const useWeb3 = () => {
       return parseFloat(ethers.formatUnits(balance, decimals));
   };
 
+  /**
+   * Fetches all relevant on-chain data for the connected user.
+   */
   const fetchContractData = useCallback(async (currentProvider: ethers.BrowserProvider, currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract, mon: ethers.Contract) => {
     setLoading(true);
     setError(null);
     try {
-        // PRE-FLIGHT CHECKS: Ensure contracts are actually deployed on the current network.
-        const chadContractCode = await currentProvider.getCode(CHAD_TOKEN_ADDRESS);
-        if (chadContractCode === '0x') {
-            throw new Error("CHAD token contract not found. Please check its address in constants.ts.");
-        }
-        const gameContractCode = await currentProvider.getCode(CHADFLIP_CONTRACT_ADDRESS);
-        if (gameContractCode === '0x') {
-            throw new Error("ChadFlip game contract not found. Please check its address in constants.ts.");
-        }
-
         const userAddress = await currentSigner.getAddress();
-        const newBalances: Balances = { chad: 0, mon: 0 };
-        const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
-        const newDecimals = { chad: 18, mon: 18 };
-        const errors: string[] = [];
+
+        // Pre-flight checks to ensure contracts are deployed.
+        const contractCodes = await Promise.all([
+            currentProvider.getCode(CHAD_TOKEN_ADDRESS),
+            currentProvider.getCode(CHADFLIP_CONTRACT_ADDRESS)
+        ]);
+        if (contractCodes[0] === '0x') throw new Error("CHAD token contract not found on this network.");
+        if (contractCodes[1] === '0x') throw new Error("ChadFlip game contract not found on this network.");
 
         const results = await Promise.allSettled([
             chad.decimals(),
             chad.balanceOf(userAddress),
-            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.decimals() : Promise.resolve(null),
-            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.balanceOf(userAddress) : Promise.resolve(null),
+            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.decimals() : Promise.resolve(18),
+            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.balanceOf(userAddress) : Promise.resolve(0n),
             chadFlip.dailyBetLimit(),
             chadFlip.dailyBetAmount(userAddress),
         ]);
 
         const [ chadDecimalsResult, chadBalanceResult, monDecimalsResult, monBalanceResult, dailyLimitResult, dailyUsedResult ] = results;
-
-        // Process CHAD Token Data
-        if (chadDecimalsResult.status === 'fulfilled') newDecimals.chad = Number(chadDecimalsResult.value);
-        else { console.error("Failed to fetch CHAD decimals:", chadDecimalsResult.reason); errors.push("Could not get CHAD token info."); }
         
-        if (chadBalanceResult.status === 'fulfilled') newBalances.chad = formatBalance(chadBalanceResult.value, newDecimals.chad);
-        else { console.error("Failed to fetch CHAD balance:", chadBalanceResult.reason); errors.push("Could not fetch CHAD balance."); }
-
-        // Process MON Token Data (if applicable)
-        if (MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") {
-            if (monDecimalsResult.status === 'fulfilled' && monDecimalsResult.value !== null) {
-                newDecimals.mon = Number(monDecimalsResult.value);
-                if (monBalanceResult.status === 'fulfilled' && monBalanceResult.value !== null) {
-                    newBalances.mon = formatBalance(monBalanceResult.value, newDecimals.mon);
-                } else if (monBalanceResult.status === 'rejected') {
-                    console.warn("Could not fetch MON balance:", monBalanceResult.reason);
-                }
-            } else if (monDecimalsResult.status === 'rejected') {
-                console.warn("Could not fetch MON decimals:", monDecimalsResult.reason);
-            }
-        }
-        
-        // Process Game Contract Data
-        if (dailyLimitResult.status === 'fulfilled') newDailyLimit.limit = formatBalance(dailyLimitResult.value, newDecimals.chad);
-        else { console.error("Failed to fetch daily limit:", dailyLimitResult.reason); errors.push("Could not fetch daily limit."); }
-        
-        if (dailyUsedResult.status === 'fulfilled') newDailyLimit.used = formatBalance(dailyUsedResult.value, newDecimals.chad);
-        else console.warn("Could not fetch used daily amount (user may have never bet):", dailyUsedResult.reason);
-        
+        const newDecimals = { chad: 18, mon: 18 };
+        if (chadDecimalsResult.status === 'fulfilled') newDecimals.chad = Number(chadDecimalsResult.value); else console.error("Failed to fetch CHAD decimals:", chadDecimalsResult.reason);
+        if (monDecimalsResult.status === 'fulfilled') newDecimals.mon = Number(monDecimalsResult.value); else console.warn("Could not fetch MON decimals:", monDecimalsResult.reason);
         setTokenDecimals(newDecimals);
-        setBalances(newBalances);
-        setDailyLimit(newDailyLimit);
 
-        if (errors.length > 0) setError(errors.join(' '));
+        const newBalances: Balances = { chad: 0, mon: 0 };
+        if (chadBalanceResult.status === 'fulfilled') newBalances.chad = formatBalance(chadBalanceResult.value, newDecimals.chad); else { setError("Could not fetch CHAD balance."); console.error(chadBalanceResult.reason); }
+        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, newDecimals.mon); else console.warn("Could not fetch MON balance:", monBalanceResult.reason);
+        setBalances(newBalances);
+
+        const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
+        if (dailyLimitResult.status === 'fulfilled') newDailyLimit.limit = formatBalance(dailyLimitResult.value, newDecimals.chad); else { setError("Could not fetch daily limit."); console.error(dailyLimitResult.reason); }
+        if (dailyUsedResult.status === 'fulfilled') newDailyLimit.used = formatBalance(dailyUsedResult.value, newDecimals.chad); else console.warn("Could not fetch used daily amount:", dailyUsedResult.reason);
+        setDailyLimit(newDailyLimit);
 
     } catch (e: any) {
         console.error("An unexpected error occurred while fetching account data:", e);
-        if (e.code === 'NETWORK_ERROR') {
-             setError("Network error. Please check your connection and ensure you're on the correct network.");
-        } else {
-             setError(e.message || "An unexpected error occurred while fetching account data.");
-        }
+        setError(e.message || "An unexpected error occurred while fetching account data.");
     } finally {
         setLoading(false);
     }
   }, []);
 
+  /**
+   * Switches the wallet's network to the Monad Testnet, or adds it if it doesn't exist.
+   */
+  const switchToMonadTestnet = async (provider: any) => {
+    try {
+        await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: MONAD_TESTNET_HEX_CHAIN_ID }],
+        });
+    } catch (switchError: any) {
+        // This error code indicates that the chain has not been added to MetaMask.
+        if (switchError.code === 4902) {
+            try {
+                await provider.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [MONAD_TESTNET_CONFIG],
+                });
+            } catch (addError) {
+                console.error("Failed to add Monad Testnet:", addError);
+                throw new Error("Failed to add Monad Testnet to your wallet.");
+            }
+        } else {
+            console.error("Failed to switch network:", switchError);
+            throw new Error("Failed to switch to Monad Testnet. Please do it manually in your wallet.");
+        }
+    }
+  };
+  
+  /**
+   * Connects to the user's wallet, handling network validation and switching.
+   */
   const connectWallet = useCallback(async (walletType: WalletType) => {
     setError(null);
     setLoading(true);
 
-    if (!CHADFLIP_CONTRACT_ADDRESS || CHADFLIP_CONTRACT_ADDRESS.startsWith("0x00") || !CHAD_TOKEN_ADDRESS) {
-        setError("Contract addresses are not configured. Please update constants.ts");
-        setLoading(false);
-        return;
-    }
-
-    let selectedProvider: any = null;
-    const providers: any[] = (window.ethereum as any)?.providers || [];
-
-    switch (walletType) {
-        case 'metamask':
-            selectedProvider = providers.find(p => p.isMetaMask) || (window.ethereum?.isMetaMask ? window.ethereum : null);
-            if (!selectedProvider) setError("MetaMask is not installed or available.");
-            break;
-        case 'okx':
-            selectedProvider = window.okxwallet || providers.find(p => p.isOkxWallet) || (window.ethereum?.isOkxWallet ? window.ethereum : null);
-            if (!selectedProvider) setError("OKX Wallet is not installed.");
-            break;
-        case 'phantom':
-            selectedProvider = window.phantom?.ethereum;
-            if (!selectedProvider) setError("Phantom Wallet is not installed.");
-            break;
-        default:
-            setError("Invalid wallet type selected.");
-    }
-    
-    if (!selectedProvider) {
-        setLoading(false);
-        return;
-    }
-
     try {
+        let selectedProvider: any = null;
+        switch (walletType) {
+            case 'metamask': selectedProvider = window.ethereum?.isMetaMask ? window.ethereum : (window.ethereum?.providers?.find((p: any) => p.isMetaMask) || null); break;
+            case 'okx': selectedProvider = window.okxwallet || (window.ethereum?.providers?.find((p: any) => p.isOkxWallet) || null); break;
+            case 'phantom': selectedProvider = window.phantom?.ethereum; break;
+        }
+
+        if (!selectedProvider) {
+            throw new Error(`${walletType.charAt(0).toUpperCase() + walletType.slice(1)} wallet is not installed.`);
+        }
+
+        // Request account access
+        await selectedProvider.request({ method: 'eth_requestAccounts' });
+
         const newProvider = new ethers.BrowserProvider(selectedProvider);
-        
-        // CRITICAL: Network Validation
         const network = await newProvider.getNetwork();
+
         if (network.chainId !== MONAD_TESTNET_CHAIN_ID) {
-            throw new Error(`Please switch to Monad Testnet in your wallet. (Current: ${network.name})`);
+            setError("Wrong network. Attempting to switch...");
+            await switchToMonadTestnet(selectedProvider);
+            // After switching, re-initialize provider to get the new network's state
+            const finalProvider = new ethers.BrowserProvider(selectedProvider);
+            const finalSigner = await finalProvider.getSigner();
+            const finalAddress = await finalSigner.getAddress();
+            
+            setRawProvider(selectedProvider);
+            setProvider(finalProvider);
+            setSigner(finalSigner);
+            setAddress(finalAddress);
+
+            const chadFlip = new ethers.Contract(CHADFLIP_CONTRACT_ADDRESS, chadFlipContractABI, finalSigner);
+            const chad = new ethers.Contract(CHAD_TOKEN_ADDRESS, erc20ABI, finalSigner);
+            const mon = new ethers.Contract(MON_TOKEN_ADDRESS, erc20ABI, finalSigner);
+            
+            setChadFlipContract(chadFlip);
+            setChadTokenContract(chad);
+            setMonTokenContract(mon);
+            await fetchContractData(finalProvider, finalSigner, chadFlip, chad, mon);
+            return; // Exit after successful switch and data fetch
         }
 
         const newSigner = await newProvider.getSigner();
         const newAddress = await newSigner.getAddress();
-
-        const chadFlip = new ethers.Contract(CHADFLIP_CONTRACT_ADDRESS, chadFlipContractABI, newSigner);
-        const chad = new ethers.Contract(CHAD_TOKEN_ADDRESS, erc20ABI, newSigner);
-        const mon = new ethers.Contract(MON_TOKEN_ADDRESS, erc20ABI, newSigner);
         
         setRawProvider(selectedProvider);
         setProvider(newProvider);
         setSigner(newSigner);
         setAddress(newAddress);
+        
+        const chadFlip = new ethers.Contract(CHADFLIP_CONTRACT_ADDRESS, chadFlipContractABI, newSigner);
+        const chad = new ethers.Contract(CHAD_TOKEN_ADDRESS, erc20ABI, newSigner);
+        const mon = new ethers.Contract(MON_TOKEN_ADDRESS, erc20ABI, newSigner);
+        
         setChadFlipContract(chadFlip);
         setChadTokenContract(chad);
         setMonTokenContract(mon);
-
         await fetchContractData(newProvider, newSigner, chadFlip, chad, mon);
 
     } catch (e: any) {
         console.error("Connection failed:", e);
-        setError(e.message || "Failed to connect wallet. Ensure you are on the correct network.");
-        if (e.code === 'ACTION_REJECTED') {
-            setError('You rejected the connection request.');
-        }
+        setError(e.message || "Failed to connect wallet.");
     } finally {
         setLoading(false);
     }
@@ -234,7 +229,6 @@ const useWeb3 = () => {
       setMonTokenContract(null);
       setBalances({chad: 0, mon: 0});
       setDailyLimit({used: 0, limit: 5000});
-      setTokenDecimals({chad: 18, mon: 18});
   }, []);
   
   const refreshData = useCallback(() => {
@@ -292,14 +286,10 @@ const useWeb3 = () => {
 
   useEffect(() => {
     if (rawProvider && rawProvider.on) {
-      const handleAccountsChanged = () => {
-        disconnect();
-        setError("Account changed. Please reconnect your wallet.");
-      };
-      const handleChainChanged = () => {
-        disconnect();
-        setError("Network changed. Please reconnect to the Monad Testnet.");
-      };
+      // For robustness, reload the page on account or network changes.
+      // This is a simple and effective way to ensure a clean state.
+      const handleAccountsChanged = () => window.location.reload();
+      const handleChainChanged = () => window.location.reload();
       
       rawProvider.on('accountsChanged', handleAccountsChanged);
       rawProvider.on('chainChanged', handleChainChanged);
@@ -311,7 +301,7 @@ const useWeb3 = () => {
         }
       }
     }
-  }, [rawProvider, disconnect]);
+  }, [rawProvider]);
 
   return { connectWallet, disconnect, address, balances, dailyLimit, placeBet, loading, error, refreshData, bettingStep, setBettingStep };
 };
