@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Balances, DailyLimit, BetDirection, BettingStep, MarketData } from '../types';
 import PriceChart from './PriceChart';
@@ -9,6 +8,7 @@ import { playSound } from '../utils/sound';
 import Tooltip from './Tooltip';
 import ConfirmationModal from './ConfirmationModal';
 import SparklineChart from './SparklineChart';
+import SpinnerIcon from './icons/SpinnerIcon';
 
 interface BettingViewProps {
   priceHistory: { time: string; price: number }[];
@@ -30,6 +30,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [duration, setDuration] = useState<number>(60);
   const [betAmount, setBetAmount] = useState<string>('10');
   const [displayError, setDisplayError] = useState<string | null>(null);
+  const [submittedDirection, setSubmittedDirection] = useState<BetDirection | null>(null);
 
   useEffect(() => {
     // When a new error comes from the hook, display it.
@@ -77,6 +78,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
         return;
     }
     
+    setSubmittedDirection(direction);
     setBetToConfirm({ direction, amount, leverage, duration });
     setBettingStep('confirming');
     setIsModalOpen(true);
@@ -88,6 +90,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
       if (success) {
         setIsModalOpen(false);
         setBetToConfirm(null);
+        setSubmittedDirection(null);
       }
     }
   };
@@ -95,6 +98,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const handleCloseModal = () => {
       setIsModalOpen(false);
       setBettingStep('idle');
+      setSubmittedDirection(null);
   };
   
   const handleUserInteraction = () => {
@@ -133,7 +137,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
     handleUserInteraction();
   };
 
-  const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0;
+  const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0 || isNaN(parseFloat(betAmount));
 
   const formatVolume = (volume: number) => {
     if (volume >= 1e9) {
@@ -222,15 +226,17 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
           <div className="grid grid-cols-2 gap-4 w-full max-w-md">
               <button 
                   onClick={() => handleDirectionChange('UP')}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'UP' ? 'bg-brand-green text-black shadow-green-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'UP' ? 'bg-brand-green text-black shadow-green-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
               >
-                  <ArrowUpIcon className="w-6 h-6" /> UP
+                  {loading && submittedDirection === 'UP' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowUpIcon className="w-6 h-6" />} UP
               </button>
               <button 
                   onClick={() => handleDirectionChange('DOWN')}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'DOWN' ? 'bg-brand-red text-white shadow-red-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'DOWN' ? 'bg-brand-red text-white shadow-red-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
               >
-                  <ArrowDownIcon className="w-6 h-6" /> DOWN
+                  {loading && submittedDirection === 'DOWN' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowDownIcon className="w-6 h-6" />} DOWN
               </button>
           </div>
 
@@ -240,7 +246,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               </Tooltip>
               <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 5, 10].map(val => (
-                      <button key={val} onClick={() => handleLeverageChange(val)} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
+                      <button key={val} onClick={() => handleLeverageChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
                           {val}x
                       </button>
                   ))}
@@ -253,7 +259,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               </Tooltip>
               <div className="grid grid-cols-4 gap-2">
                   {[15, 30, 45, 60].map(val => (
-                      <button key={val} onClick={() => handleDurationChange(val)} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${duration === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'}`}>
+                      <button key={val} onClick={() => handleDurationChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${duration === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
                           {val}s
                       </button>
                   ))}
@@ -265,9 +271,9 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                   <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">QUICK AMOUNT</p>
               </Tooltip>
               <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setAmountByPercentage(25)} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105">25%</button>
-                  <button onClick={() => setAmountByPercentage(50)} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105">50%</button>
-                  <button onClick={() => setAmountByPercentage(100)} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105">MAX</button>
+                  <button onClick={() => setAmountByPercentage(25)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">25%</button>
+                  <button onClick={() => setAmountByPercentage(50)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">50%</button>
+                  <button onClick={() => setAmountByPercentage(100)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">MAX</button>
               </div>
           </div>
 
@@ -277,7 +283,8 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                   type="number"
                   value={betAmount}
                   onChange={handleAmountChange}
-                  className="w-full p-4 bg-brand-dark border-2 border-brand-light-gray rounded-lg text-white text-xl font-bold text-center focus:border-brand-green outline-none"
+                  disabled={loading}
+                  className="w-full p-4 bg-brand-dark border-2 border-brand-light-gray rounded-lg text-white text-xl font-bold text-center focus:border-brand-green outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="10"
               />
           </div>

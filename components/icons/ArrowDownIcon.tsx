@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const ArrowDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (

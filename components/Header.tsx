@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { playSound, isMuted, toggleMute } from '../utils/sound';
 import SoundOnIcon from './icons/SoundOnIcon';

@@ -1,4 +1,3 @@
-
 const soundUrls = {
   click: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_bb630cc098.mp3',
   placeBet: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_195514243a.mp3',

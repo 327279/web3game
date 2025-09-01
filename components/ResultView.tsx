@@ -1,5 +1,3 @@
-
-
 import React, { useEffect } from 'react';
 import { BetResult } from '../types';
 import { playSound } from '../utils/sound';

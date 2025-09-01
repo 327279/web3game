@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { GameState, Bet, BetResult } from './types';
@@ -15,9 +13,6 @@ import { WALLETCONNECT_PROJECT_ID, MONAD_TESTNET_CONFIG, MONAD_TESTNET_CHAIN_ID 
 import ConfigurationError from './components/ConfigurationError';
 
 // 1. Get projectID from WalletConnect Cloud
-// FIX: Explicitly type projectId as string to avoid a TypeScript error.
-// The comparison on the next line would fail at compile time because the compiler knows
-// the constant value can never be equal to the placeholder string. This preserves the check.
 const projectId: string = WALLETCONNECT_PROJECT_ID;
 const isConfigured = projectId && projectId !== 'GET_YOUR_OWN_PROJECT_ID_FROM_WALLETCONNECT_CLOUD';
 
@@ -46,9 +41,11 @@ if (isConfigured) {
     projectId,
     defaultChain: monadTestnet,
     enableAnalytics: false,
-    // FIX: Removed the `siweConfig` property. The type `{ enabled: false }` was incorrect for this version of Web3Modal,
-    // causing a compilation error. Since Sign-In with Ethereum (SIWE) is not used, omitting the optional
-    // `siweConfig` property is the correct way to disable it.
+    // Fix: The `siweConfig` property is now required by `createWeb3Modal`.
+    // We disable it as Sign-In with Ethereum is not used in this application.
+    siweConfig: {
+      enabled: false,
+    },
   });
 }
   

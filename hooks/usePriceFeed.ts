@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 interface PriceData {
@@ -36,7 +35,6 @@ const generateInitialData = (initialPrice: number) => {
 
 const usePriceFeed = (initialPrice: number) => {
   // Use the lazy initializer form of useState to generate data only on the first render.
-  // This avoids the "render with empty array" problem that caused the crash.
   const [initialData] = useState(() => generateInitialData(initialPrice));
 
   const [priceHistory, setPriceHistory] = useState<PriceData[]>(initialData.history);
