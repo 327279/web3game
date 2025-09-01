@@ -154,6 +154,14 @@ const useWeb3 = () => {
 
   const primaryWallet = useMemo(() => connectedWallets[0], [connectedWallets]);
 
+  // FIX: Moved address and refreshData declarations before their usage in useEffect.
+  const address = useMemo(() => primaryWallet?.accounts[0]?.address, [primaryWallet]);
+  const refreshData = useCallback(() => {
+    if(signer && chadFlipContract && chadTokenContract && monTokenContract){
+      fetchContractData(signer, chadFlipContract, chadTokenContract, monTokenContract);
+    }
+  }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
+
   // Effect to initialize provider, signer, and contracts when wallet connects or disconnects
   useEffect(() => {
     const setup = async () => {
@@ -196,6 +204,43 @@ const useWeb3 = () => {
     };
     setup();
   }, [primaryWallet, fetchContractData]);
+  
+  // Effect to set up real-time event listeners for contract events
+  useEffect(() => {
+    if (!chadFlipContract || !address) {
+        return;
+    }
+
+    console.log(`Setting up event listeners for address: ${address}`);
+
+    const betPlacedFilter = chadFlipContract.filters.BetPlaced(null, address);
+    const betResolvedFilter = chadFlipContract.filters.BetResolved(null, address);
+
+    const handleBetPlaced = (betId: any, player: string) => {
+        console.log(`[EVENT] BetPlaced detected for user ${player}. Refreshing data...`);
+        // Use a small delay to allow RPC node to sync before fetching
+        setTimeout(() => refreshData(), 1000);
+    };
+
+    const handleBetResolved = (betId: any, player: string, won: boolean, payoutAmount: bigint) => {
+        console.log(`[EVENT] BetResolved detected for user ${player}. Won: ${won}. Payout: ${ethers.formatUnits(payoutAmount, tokenDecimals.chad)}. Refreshing data...`);
+        // The ResultView component handles the win/loss sound effect based on UI state change.
+        // Refreshing data here ensures balance is updated from the canonical on-chain source.
+        setTimeout(() => refreshData(), 1000);
+    };
+
+    chadFlipContract.on(betPlacedFilter, handleBetPlaced);
+    chadFlipContract.on(betResolvedFilter, handleBetResolved);
+
+    // Cleanup function to prevent memory leaks and duplicate listeners
+    return () => {
+        if (chadFlipContract) {
+            console.log("Cleaning up event listeners.");
+            chadFlipContract.off(betPlacedFilter, handleBetPlaced);
+            chadFlipContract.off(betResolvedFilter, handleBetResolved);
+        }
+    };
+  }, [chadFlipContract, address, refreshData, tokenDecimals.chad]);
 
   const openModal = useCallback(() => {
     setError(null);
@@ -208,12 +253,6 @@ const useWeb3 = () => {
       }
   }, [wallet, disconnect]);
   
-  const refreshData = useCallback(() => {
-    if(signer && chadFlipContract && chadTokenContract && monTokenContract){
-      fetchContractData(signer, chadFlipContract, chadTokenContract, monTokenContract);
-    }
-  }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
-
   const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>) => {
     if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !primaryWallet) {
       setError("Please connect your wallet first.");
@@ -291,8 +330,6 @@ const useWeb3 = () => {
     }
     return { won: playerWon, payout };
   };
-
-  const address = useMemo(() => primaryWallet?.accounts[0]?.address, [primaryWallet]);
 
   return { 
     openModal,
