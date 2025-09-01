@@ -205,42 +205,9 @@ const useWeb3 = () => {
     setup();
   }, [primaryWallet, fetchContractData]);
   
-  // Effect to set up real-time event listeners for contract events
-  useEffect(() => {
-    if (!chadFlipContract || !address) {
-        return;
-    }
-
-    console.log(`Setting up event listeners for address: ${address}`);
-
-    const betPlacedFilter = chadFlipContract.filters.BetPlaced(null, address);
-    const betResolvedFilter = chadFlipContract.filters.BetResolved(null, address);
-
-    const handleBetPlaced = (betId: any, player: string) => {
-        console.log(`[EVENT] BetPlaced detected for user ${player}. Refreshing data...`);
-        // Use a small delay to allow RPC node to sync before fetching
-        setTimeout(() => refreshData(), 1000);
-    };
-
-    const handleBetResolved = (betId: any, player: string, won: boolean, payoutAmount: bigint) => {
-        console.log(`[EVENT] BetResolved detected for user ${player}. Won: ${won}. Payout: ${ethers.formatUnits(payoutAmount, tokenDecimals.chad)}. Refreshing data...`);
-        // The ResultView component handles the win/loss sound effect based on UI state change.
-        // Refreshing data here ensures balance is updated from the canonical on-chain source.
-        setTimeout(() => refreshData(), 1000);
-    };
-
-    chadFlipContract.on(betPlacedFilter, handleBetPlaced);
-    chadFlipContract.on(betResolvedFilter, handleBetResolved);
-
-    // Cleanup function to prevent memory leaks and duplicate listeners
-    return () => {
-        if (chadFlipContract) {
-            console.log("Cleaning up event listeners.");
-            chadFlipContract.off(betPlacedFilter, handleBetPlaced);
-            chadFlipContract.off(betResolvedFilter, handleBetResolved);
-        }
-    };
-  }, [chadFlipContract, address, refreshData, tokenDecimals.chad]);
+  // NOTE: Real-time event listeners have been removed.
+  // The Monad Testnet RPC endpoint does not support `eth_newFilter`, which is required for `contract.on()`.
+  // The application will now use a manual refresh model after transactions are confirmed.
 
   const openModal = useCallback(() => {
     setError(null);
@@ -280,7 +247,6 @@ const useWeb3 = () => {
               setLoading(false);
               return null;
           }
-          // New, more affordable collateral calculation
           const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
           
           const erc20MonBalance = await monTokenContract.balanceOf(userAddress);
@@ -304,38 +270,19 @@ const useWeb3 = () => {
       setBettingStep('placing_bet');
       const predictionUp = bet.direction === 'UP';
 
+      // Get the next bet ID before placing the bet for higher reliability
+      const contractBetId = await chadFlipContract.nextBetId();
+
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
-      const receipt = await tx.wait();
-
-      // Robustly find the BetPlaced event in the transaction receipt.
-      let betPlacedEvent = null;
-      if (receipt && receipt.logs) {
-          for (const log of receipt.logs) {
-              try {
-                  const parsedLog = chadFlipContract.interface.parseLog(log);
-                  if (parsedLog && parsedLog.name === 'BetPlaced') {
-                      betPlacedEvent = parsedLog;
-                      break; // Found the event, no need to continue
-                  }
-              } catch (e) {
-                  // This log is not from the ChadFlip contract ABI (e.g., an Approval event), so we can safely ignore it.
-              }
-          }
-      }
-
-      if (!betPlacedEvent) {
-          console.error("Transaction receipt:", receipt);
-          throw new Error("Could not find BetPlaced event in transaction receipt. The transaction may have succeeded, but the event was not processed correctly.");
-      }
-      const contractBetId = betPlacedEvent.args.betId;
+      await tx.wait();
       
       setBettingStep('success');
-      // No optimistic updates here; let the event listener handle the data refresh.
+      refreshData(); // Manually refresh data after successful transaction
       return contractBetId;
 
     } catch (e: any) {
       console.error("Bet placement failed:", e);
-      refreshData(); // Refresh data to revert any optimistic updates if they existed
+      refreshData();
       setError(parseBlockchainError(e));
       setBettingStep('error');
       return null;
@@ -356,27 +303,28 @@ const useWeb3 = () => {
           const tx = await chadFlipContract.resolveBet(bet.contractBetId, priceWentUp);
           const receipt = await tx.wait();
           
-          // Robustly find the BetResolved event in the transaction receipt.
           let betResolvedEvent = null;
           if (receipt && receipt.logs) {
               for (const log of receipt.logs) {
-                  try {
-                      const parsedLog = chadFlipContract.interface.parseLog(log);
-                      if (parsedLog && parsedLog.name === 'BetResolved') {
-                          betResolvedEvent = parsedLog;
-                          break; // Found the event
+                  // Add extra check for contract address to be more robust
+                  if (log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase()) {
+                      try {
+                          const parsedLog = chadFlipContract.interface.parseLog(log);
+                          if (parsedLog && parsedLog.name === 'BetResolved') {
+                              betResolvedEvent = parsedLog;
+                              break;
+                          }
+                      } catch (e) {
+                          // Ignore logs that don't match our contract's ABI
                       }
-                  } catch (e) {
-                      // This log is not from our contract's ABI, ignore it.
                   }
               }
           }
 
           if (!betResolvedEvent) {
-              // This should ideally not happen if the transaction succeeded.
-              // We can rely on the event listener to refresh data, but we can't show the result screen.
               console.error("Could not find BetResolved event in transaction receipt. Receipt:", receipt);
-              return { won: false, payout: 0 }; // Return a neutral result.
+              setError("Could not confirm bet result from the blockchain. Please refresh data manually.");
+              return null; 
           }
 
           const { won, payoutAmount } = betResolvedEvent.args;

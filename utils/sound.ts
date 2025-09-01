@@ -1,8 +1,8 @@
 const soundUrls = {
-  click: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_bb630cc098.mp3',
-  placeBet: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_195514243a.mp3',
-  win: 'https://cdn.pixabay.com/download/audio/2022/11/17/audio_7316ba157c.mp3',
-  lose: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c970a047a0.mp3',
+  click: 'https://cdn.pixabay.com/audio/2022/03/15/audio_73ed8c1137.mp3',
+  placeBet: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c632821540.mp3',
+  win: 'https://cdn.pixabay.com/audio/2022/03/22/audio_50b97f5950.mp3',
+  lose: 'https://cdn.pixabay.com/audio/2022/03/07/audio_a890291931.mp3',
 };
 
 type SoundType = keyof typeof soundUrls;

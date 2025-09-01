@@ -101,12 +101,13 @@ function MainApp() {
     if (result) {
         setBetResult(result);
         setGameState(GameState.RESULT);
+        refreshData(); // Refresh data after resolution to show correct final balances
     } else {
         // If resolution fails, go back to betting view to show the error
         // The error is already set in the useWeb3 hook
         setGameState(GameState.BETTING);
     }
-  }, [currentBet, resolveBet]);
+  }, [currentBet, resolveBet, refreshData]);
 
   const handlePlayAgain = useCallback(() => {
     setCurrentBet(null);
