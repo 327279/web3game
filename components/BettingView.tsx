@@ -204,13 +204,13 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between h-48">
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between">
             <div>
               <p className="text-sm text-brand-text">MARKET OVERVIEW (BTC)</p>
               <div className="flex justify-between items-center mt-2">
                 <div>
                   <p 
-                    className={`text-3xl sm:text-4xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
+                    className={`text-3xl md:text-4xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
                   >
                     {isPriceChangePositive ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
                   </p>
@@ -219,16 +219,16 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                 <SparklineChart data={marketData.priceHistory24h} isPositive={isPriceChangePositive} />
               </div>
             </div>
-            <div>
-              <p className="text-xs text-brand-text mt-4">24h Volume</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
+            <div className="mt-4">
+              <p className="text-xs text-brand-text">24h Volume</p>
+              <p className="text-2xl md:text-3xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
             </div>
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
             <div className="flex justify-between items-center mb-2">
                 <div>
                     <p className="text-sm text-brand-text">BTC PRICE</p>
-                    <p className="text-3xl sm:text-4xl font-bold text-white">${currentPrice.toFixed(4)}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-white">${currentPrice.toFixed(4)}</p>
                 </div>
                 {isZoomed && (
                     <button 
@@ -237,7 +237,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                         aria-label="Reset chart zoom"
                     >
                         <ZoomOutIcon className="w-4 h-4" />
-                        Reset Zoom
+                        Reset
                     </button>
                 )}
             </div>
@@ -252,7 +252,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
              <p className="text-sm text-brand-text mb-4">YOUR ASSETS</p>
-             <div className="flex justify-around">
+             <div className="flex justify-center gap-12 sm:justify-around">
                  <div className="text-center">
                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
                          <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -280,7 +280,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                       <button className="text-brand-text hover:text-white transition transform hover:scale-110" onClick={handleRefreshData}><RefreshIcon className="w-4 h-4" /></button>
                   </div>
               </Tooltip>
-              <p className="text-xl sm:text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
+              <p className="text-xl md:text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
               <div className="w-full bg-brand-light-gray rounded-full h-2.5 mt-2">
                   <div className="bg-brand-green h-2.5 rounded-full" style={{ width: `${(dailyLimit.used / dailyLimit.limit) * 100}%` }}></div>
               </div>

@@ -13,11 +13,11 @@ const ResultView: React.FC<ResultViewProps> = ({ result, onPlayAgain }) => {
   }, [result.won]);
 
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-150px)] py-10">
+    <div className="flex justify-center items-center py-10">
       <div className="w-full max-w-md bg-brand-gray p-6 sm:p-10 rounded-xl border border-brand-light-gray text-center animate-fade-in">
         {result.won ? (
           <>
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-brand-green mb-4" style={{textShadow: '0 0 15px #a8ff00'}}>YOU WON!</h2>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-brand-green mb-4" style={{textShadow: '0 0 15px #a8ff00'}}>YOU WON!</h2>
             <p className="text-xl text-white">Congratulations!</p>
             <p className="text-3xl font-bold text-brand-green mt-6">
               +{result.payout.toFixed(2)} CHAD
@@ -25,7 +25,7 @@ const ResultView: React.FC<ResultViewProps> = ({ result, onPlayAgain }) => {
           </>
         ) : (
           <>
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-brand-red mb-4" style={{textShadow: '0 0 15px #f84339'}}>YOU LOST</h2>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-brand-red mb-4" style={{textShadow: '0 0 15px #f84339'}}>YOU LOST</h2>
             <p className="text-xl text-white">Better luck next time!</p>
             <p className="text-3xl font-bold text-brand-red mt-6">
               0.00 CHAD

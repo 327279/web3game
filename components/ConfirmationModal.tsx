@@ -38,7 +38,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const isProcessing = bettingStep !== 'confirming' && bettingStep !== 'error' && bettingStep !== 'idle';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity animate-fade-in" aria-hidden="true" onClick={onClose}></div>
 
@@ -85,7 +85,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </div>
             )}
 
-            <div className="flex items-center gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 mt-6">
                 <button
                     onClick={onClose}
                     disabled={isProcessing}

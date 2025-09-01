@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
 
   return (
     <header className="flex justify-between items-center bg-brand-gray p-4 rounded-xl border border-brand-light-gray">
-      <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tighter">
+      <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter">
         CHAD<span className="text-brand-green">FLIP</span>
       </h1>
       <div className="flex items-center gap-2 md:gap-4">
@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
                   playSound('click');
                   onDisconnect();
                 }}
-                className="bg-brand-red text-white font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-opacity-80 transition-all duration-200 text-sm transform hover:scale-105"
+                className="bg-brand-red text-white font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 text-sm transform hover:scale-105"
             >
                 Disconnect
             </button>
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
               playSound('click');
               onConnect();
             }}
-            className="bg-brand-green text-black font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105"
+            className="bg-brand-green text-black font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105"
           >
             Connect Wallet
           </button>
