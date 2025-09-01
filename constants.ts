@@ -6,9 +6,9 @@ export const WALLETCONNECT_PROJECT_ID = '8f6bb6cc7777e497f917e996e40a11ac';
 
 
 // ===================================================================================
-// === IMPORTANT: DEPLOY THE NEW `ChadFlip.sol` CONTRACT AND PASTE THE ADDRESS HERE ===
+// === IMPORTANT: DEPLOY THE `ChadFlip.sol` CONTRACT AND PASTE THE NEW ADDRESS HERE ===
 // ===================================================================================
-export const CHADFLIP_CONTRACT_ADDRESS = "0x69161B0169c1A78CeA8ADaBd27a54692705b4974"; // <-- Replace with your new address after deploying
+export const CHADFLIP_CONTRACT_ADDRESS = "0xb73cbfc7970Ce71085F474f36aF11588Aa17e615";
 // ===================================================================================
 
 // This is your primary betting token. Ensure this address is correct.
