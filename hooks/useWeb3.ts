@@ -35,9 +35,13 @@ const parseBlockchainError = (error: any): string => {
   } else if (error.error?.message) {
     reason = error.error.message;
   } else if (error.message) {
-    const match = error.message.match(/revert(?:ed)?(?: with reason string)? ["'](.*?)["']/);
+    // A more robust regex to catch revert reasons
+    const match = error.message.match(/revert(?:ed)?(?: with reason string)? ["'](.*?.)["']/i);
     if (match && match[1]) {
       reason = match[1];
+    } else if (error.message.includes('reverted')) {
+      // Fallback for generic revert messages
+      reason = 'The contract reverted the transaction. Check your inputs or balances.';
     }
   }
 
@@ -219,6 +223,7 @@ const useWeb3 = () => {
           throw new Error("Bet placement transaction failed. The contract reverted it.");
       }
 
+      // Robust event parsing
       for (const log of receipt.logs) {
         try {
           const parsedLog = chadFlipContract.interface.parseLog(log);
@@ -229,7 +234,7 @@ const useWeb3 = () => {
             return contractBetId;
           }
         } catch (e) {
-          // Ignore logs that are not from this contract
+          // Ignore logs that are not from this contract's ABI
         }
       }
 
@@ -261,6 +266,7 @@ const useWeb3 = () => {
             throw new Error("Bet resolution transaction failed. The contract reverted it.");
           }
 
+          // Robust event parsing
           for (const log of receipt.logs) {
             try {
                 const parsedLog = chadFlipContract.interface.parseLog(log);
@@ -272,7 +278,7 @@ const useWeb3 = () => {
                     };
                 }
             } catch (e) {
-                // Ignore other logs
+                // Ignore other logs that don't match the ABI
             }
           }
           
