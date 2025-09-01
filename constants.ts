@@ -6,9 +6,10 @@ export const WALLETCONNECT_PROJECT_ID = '8f6bb6cc7777e497f917e996e40a11ac';
 
 
 // ===================================================================================
-// === YOUR NEW, CORRECT SMART CONTRACT ADDRESS IS NOW HERE ===
+// === IMPORTANT: COMPILE AND DEPLOY THE NEW `ChadFlip.sol` CONTRACT ===
+// === AND PASTE THE NEW CONTRACT ADDRESS HERE ===
 // ===================================================================================
-export const CHADFLIP_CONTRACT_ADDRESS = "0xfD354a6835A868e935A5F02a6a75d16019E84e12";
+export const CHADFLIP_CONTRACT_ADDRESS = "0x69161B0169c1A78CeA8ADaBd27a54692705b4974"; // <-- NEW DEPLOYED ADDRESS
 // ===================================================================================
 
 export const CHAD_TOKEN_ADDRESS = "0x2bb4219b8e85c111613f3ee192a115676f230d35";
@@ -18,11 +19,9 @@ export const CHAD_TOKEN_ADDRESS = "0x2bb4219b8e85c111613f3ee192a115676f230d35";
 export const MON_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // --- Monad Testnet Configuration ---
-// The official Chain ID for the Monad Testnet. This is used to ensure the user is on the correct network.
-export const MONAD_TESTNET_CHAIN_ID = 10143n; // Use BigInt `n` for compatibility with ethers.js
+export const MONAD_TESTNET_CHAIN_ID = 10143n;
 export const MONAD_TESTNET_HEX_CHAIN_ID = '0x279f';
 
-// Configuration object for wallet_addEthereumChain RPC call, compatible with Web3Modal
 export const MONAD_TESTNET_CONFIG = {
     chainId: MONAD_TESTNET_HEX_CHAIN_ID,
     chainName: 'Monad Testnet',
@@ -35,26 +34,550 @@ export const MONAD_TESTNET_CONFIG = {
     blockExplorerUrls: ['https://testnet.monadexplorer.com'],
 };
 
-
+// This is the ABI for the NEW, ROBUST `ChadFlip.sol` contract.
 export const chadFlipContractABI = [
-    {"inputs":[{"internalType":"address","name":"_monTokenAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
-    {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"betId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"address","name":"token","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"leverage","type":"uint256"}],"name":"BetPlaced","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"betId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"bool","name":"won","type":"bool"},{"indexed":false,"internalType":"uint256","name":"payoutAmount","type":"uint256"}],"name":"BetResolved","type":"event"},
-    {"inputs":[],"name":"MAX_LEVERAGE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"MON_TOKEN","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"betId","type":"uint256"}],"name":"bets","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"player","type":"address"},{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"leverage","type":"uint256"},{"internalType":"uint256","name":"collateral","type":"uint256"},{"internalType":"bool","name":"predictionUp","type":"bool"},{"internalType":"uint256","name":"placedTimestamp","type":"uint256"},{"internalType":"bool","name":"isResolved","type":"bool"}],"internalType":"struct Bet","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"address","name":"player","type":"address"}],"name":"dailyBetAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"dailyBetLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"houseEdgePercent","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"address","name":"player","type":"address"}],"name":"lastBetDay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"oracle","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"address","name":"_token","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"uint256","name":"_leverage","type":"uint256"},{"internalType":"bool","name":"_predictionUp","type":"bool"},{"internalType":"uint256","name":"_duration","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"_betId","type":"uint256"},{"internalType":"bool","name":"_priceWentUp","type":"bool"}],"name":"resolveBet","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"_newLimit","type":"uint256"}],"name":"setDailyBetLimit","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"_newEdge","type":"uint256"}],"name":"setHouseEdgePercent","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address","name":"_newOracle","type":"address"}],"name":"setOracle","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address","name":"_token","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawTokens","outputs":[],"stateMutability":"nonpayable","type":"function"}
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_chadTokenAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_monTokenAddress",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "betId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "leverage",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "predictionUp",
+				"type": "bool"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "entryPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "BetPlaced",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "betId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "won",
+				"type": "bool"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "payoutAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "BetResolved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "CHAD_TOKEN",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MAX_LEVERAGE",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MON_TOKEN",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "PRICE_PRECISION",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "betIdCounter",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "bets",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "leverage",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "collateral",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "predictionUp",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "entryPrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "placedTimestamp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "duration",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "isResolved",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "dailyBetLimit",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_betId",
+				"type": "uint256"
+			}
+		],
+		"name": "getBet",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "player",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "leverage",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "collateral",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "predictionUp",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "entryPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "placedTimestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "duration",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isResolved",
+						"type": "bool"
+					}
+				],
+				"internalType": "struct ChadFlip.Bet",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_player",
+				"type": "address"
+			}
+		],
+		"name": "getPlayerDailyUsed",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "houseEdgeBps",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_leverage",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "_predictionUp",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_duration",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_entryPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "placeBet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "playerDailyBetAmount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "playerLastBetDay",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_betId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_finalPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "resolveBet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_newLimit",
+				"type": "uint256"
+			}
+		],
+		"name": "setDailyBetLimit",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_newBps",
+				"type": "uint256"
+			}
+		],
+		"name": "setHouseEdgeBps",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_tokenAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_amount",
+				"type": "uint256"
+			}
+		],
+		"name": "withdrawTokens",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
 ] as const;
 
 export const erc20ABI = [
