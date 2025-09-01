@@ -273,32 +273,21 @@ const useWeb3 = () => {
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
       const receipt = await tx.wait();
       
-      // Robustly parse the receipt to find the BetPlaced event and get the ID
       if (!receipt || !receipt.logs) {
           throw new Error("Transaction succeeded but the receipt was invalid.");
       }
 
-      let betPlacedEvent = null;
-      for (const log of receipt.logs) {
-          // Check if the log is from our contract to avoid parsing errors from other contracts (e.g., ERC20 approve)
-          if (log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase()) {
-              try {
-                  const parsedLog = chadFlipContract.interface.parseLog(log);
-                  if (parsedLog && parsedLog.name === 'BetPlaced') {
-                      betPlacedEvent = parsedLog;
-                      break; // Found the event, exit the loop
-                  }
-              } catch (e) {
-                  // Ignore logs that don't match our contract's ABI
-              }
-          }
-      }
+      const eventTopic = chadFlipContract.interface.getEvent("BetPlaced").topicHash;
+      const log = receipt.logs.find(
+          l => l.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase() && l.topics[0] === eventTopic
+      );
 
-      if (!betPlacedEvent) {
+      if (!log) {
           console.error("Could not find BetPlaced event in transaction receipt.", receipt);
           throw new Error('Could not find BetPlaced event in transaction receipt. The transaction may have succeeded, but the event was not processed correctly.');
       }
 
+      const betPlacedEvent = chadFlipContract.interface.parseLog(log);
       const contractBetId = betPlacedEvent.args.betId;
       
       setBettingStep('success');
@@ -328,31 +317,24 @@ const useWeb3 = () => {
           const tx = await chadFlipContract.resolveBet(bet.contractBetId, priceWentUp);
           const receipt = await tx.wait();
           
-          let betResolvedEvent = null;
-          if (receipt && receipt.logs) {
-              for (const log of receipt.logs) {
-                  // Add extra check for contract address to be more robust
-                  if (log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase()) {
-                      try {
-                          const parsedLog = chadFlipContract.interface.parseLog(log);
-                          if (parsedLog && parsedLog.name === 'BetResolved') {
-                              betResolvedEvent = parsedLog;
-                              break;
-                          }
-                      } catch (e) {
-                          // Ignore logs that don't match our contract's ABI
-                      }
-                  }
-              }
+          if (!receipt || !receipt.logs) {
+              throw new Error("Transaction succeeded but the receipt was invalid.");
           }
 
-          if (!betResolvedEvent) {
+          const eventTopic = chadFlipContract.interface.getEvent("BetResolved").topicHash;
+          const log = receipt.logs.find(
+              l => l.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase() && l.topics[0] === eventTopic
+          );
+
+          if (!log) {
               console.error("Could not find BetResolved event in transaction receipt. Receipt:", receipt);
               setError("Could not confirm bet result from the blockchain. Please refresh data manually.");
               return null; 
           }
-
+          
+          const betResolvedEvent = chadFlipContract.interface.parseLog(log);
           const { won, payoutAmount } = betResolvedEvent.args;
+          
           return {
               won: won,
               payout: formatBalance(payoutAmount, tokenDecimals.chad)

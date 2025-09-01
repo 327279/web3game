@@ -1,8 +1,8 @@
 const soundUrls = {
-  click: 'https://aistudio-app-assets.s3.amazonaws.com/chadflip/audio_c632821540.mp3',
-  placeBet: 'https://aistudio-app-assets.s3.amazonaws.com/chadflip/audio_a890291931.mp3',
-  win: 'https://aistudio-app-assets.s3.amazonaws.com/chadflip/audio_50b97f5950.mp3',
-  lose: 'https://aistudio-app-assets.s3.amazonaws.com/chadflip/audio_73ed8c1137.mp3',
+  click: 'https://storage.googleapis.com/aistudio-app-assets/chadflip/audio_c632821540.mp3',
+  placeBet: 'https://storage.googleapis.com/aistudio-app-assets/chadflip/audio_a890291931.mp3',
+  win: 'https://storage.googleapis.com/aistudio-app-assets/chadflip/audio_50b97f5950.mp3',
+  lose: 'https://storage.googleapis.com/aistudio-app-assets/chadflip/audio_73ed8c1137.mp3',
 };
 
 type SoundType = keyof typeof soundUrls;
