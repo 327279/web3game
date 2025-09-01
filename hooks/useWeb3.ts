@@ -154,7 +154,6 @@ const useWeb3 = () => {
 
   const primaryWallet = useMemo(() => connectedWallets[0], [connectedWallets]);
 
-  // FIX: Moved address and refreshData declarations before their usage in useEffect.
   const address = useMemo(() => primaryWallet?.accounts[0]?.address, [primaryWallet]);
   const refreshData = useCallback(() => {
     if(signer && chadFlipContract && chadTokenContract && monTokenContract){
@@ -162,7 +161,6 @@ const useWeb3 = () => {
     }
   }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
 
-  // Effect to initialize provider, signer, and contracts when wallet connects or disconnects
   useEffect(() => {
     const setup = async () => {
       if (primaryWallet) {
@@ -192,7 +190,6 @@ const useWeb3 = () => {
         
         await fetchContractData(currentSigner, chadFlip, chad, mon);
       } else {
-        // Handle disconnection: clear all web3 state
         setError(null);
         setSigner(null);
         setChadFlipContract(null);
@@ -205,10 +202,6 @@ const useWeb3 = () => {
     setup();
   }, [primaryWallet, fetchContractData]);
   
-  // NOTE: Real-time event listeners have been removed.
-  // The Monad Testnet RPC endpoint does not support `eth_newFilter`, which is required for `contract.on()`.
-  // The application will now use a manual refresh model after transactions are confirmed.
-
   const openModal = useCallback(() => {
     setError(null);
     connect();
@@ -237,15 +230,15 @@ const useWeb3 = () => {
       if (currentChadAllowance < amount) {
         setBettingStep('approving_chad');
         const approveTx = await chadTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, amount);
-        await approveTx.wait();
+        const approveReceipt = await approveTx.wait();
+        if (!approveReceipt || approveReceipt.status === 0) {
+          throw new Error("CHAD approval transaction failed.");
+        }
       }
 
       if (bet.leverage > 1) {
           if (MON_TOKEN_ADDRESS === ethers.ZeroAddress) {
-              setError("Leverage Error: The MON Token Address is not configured. Please update it in `constants.ts`.");
-              setBettingStep('error');
-              setLoading(false);
-              return null;
+              throw new Error("Leverage Error: The MON Token Address is not configured. Please update it in `constants.ts`.");
           }
           const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
           
@@ -253,17 +246,17 @@ const useWeb3 = () => {
           if (erc20MonBalance < collateralNeeded) {
               const needed = ethers.formatUnits(collateralNeeded, tokenDecimals.mon);
               const has = ethers.formatUnits(erc20MonBalance, tokenDecimals.mon);
-              setError(`Insufficient MON collateral. You need ${needed} but have ${has} ERC20 MON.`);
-              setBettingStep('error');
-              setLoading(false);
-              return null;
+              throw new Error(`Insufficient MON collateral. You need ${needed} but have ${has} ERC20 MON.`);
           }
 
           const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
           if (currentMonAllowance < collateralNeeded) {
             setBettingStep('approving_mon');
             const approveMonTx = await monTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, collateralNeeded);
-            await approveMonTx.wait();
+            const approveMonReceipt = await approveMonTx.wait();
+            if (!approveMonReceipt || approveMonReceipt.status === 0) {
+              throw new Error("MON collateral approval transaction failed.");
+            }
           }
       }
       
@@ -273,8 +266,9 @@ const useWeb3 = () => {
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp, bet.duration );
       const receipt = await tx.wait();
       
-      if (!receipt || !receipt.logs) {
-          throw new Error("Transaction succeeded but the receipt was invalid.");
+      if (!receipt || receipt.status === 0) {
+          console.error("Transaction failed (reverted). Receipt:", receipt);
+          throw new Error("Bet placement transaction failed. The contract may have rejected it.");
       }
 
       let betPlacedEvent = null;
@@ -286,7 +280,6 @@ const useWeb3 = () => {
             break;
           }
         } catch (e) {
-          // This log is not from our contract's ABI, ignore it
           continue;
         }
       }
@@ -299,7 +292,7 @@ const useWeb3 = () => {
       const contractBetId = betPlacedEvent.args.betId;
       
       setBettingStep('success');
-      refreshData(); // Manually refresh data after successful transaction
+      refreshData();
       return contractBetId;
 
     } catch (e: any) {
@@ -314,7 +307,7 @@ const useWeb3 = () => {
   };
   
   const resolveBet = async (bet: Bet, finalPrice: number): Promise<BetResult | null> => {
-      if (!chadFlipContract || !bet.contractBetId) {
+      if (!chadFlipContract || typeof bet.contractBetId === 'undefined') {
           setError("Cannot resolve bet: contract not ready or bet ID is missing.");
           return null;
       }
@@ -325,8 +318,9 @@ const useWeb3 = () => {
           const tx = await chadFlipContract.resolveBet(bet.contractBetId, priceWentUp);
           const receipt = await tx.wait();
           
-          if (!receipt || !receipt.logs) {
-              throw new Error("Transaction succeeded but the receipt was invalid.");
+          if (!receipt || receipt.status === 0) {
+            console.error("Transaction failed (reverted). Receipt:", receipt);
+            throw new Error("Bet resolution transaction failed. The contract may have rejected it.");
           }
 
           let betResolvedEvent = null;
@@ -338,15 +332,13 @@ const useWeb3 = () => {
                 break;
               }
             } catch (e) {
-              // This log is not from our contract's ABI, ignore it
               continue;
             }
           }
 
           if (!betResolvedEvent) {
               console.error("Could not find BetResolved event in transaction receipt. Receipt:", receipt);
-              setError("Could not confirm bet result from the blockchain. Please refresh data manually.");
-              return null; 
+              throw new Error("Could not confirm bet result from the blockchain. Please refresh data manually.");
           }
           
           const { won, payoutAmount } = betResolvedEvent.args;

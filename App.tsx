@@ -40,6 +40,8 @@ if (isConfigured) {
       name: 'ChadFlip Web3 Game',
       icon: appIcon,
       description: 'A Web3 betting game on the Monad Testnet.',
+      // FIX: The `dappUrl` property is not valid for `appMetadata`. Replaced with `explore`.
+      explore: 'https://bet-chad.vercel.app', // Recommended for wallet compatibility
       recommendedInjectedWallets: [
         { name: 'MetaMask', url: 'https://metamask.io' },
       ]
