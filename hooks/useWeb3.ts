@@ -270,7 +270,7 @@ const useWeb3 = () => {
       setBettingStep('placing_bet');
       const predictionUp = bet.direction === 'UP';
 
-      const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
+      const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp, bet.duration );
       const receipt = await tx.wait();
       
       if (!receipt || !receipt.logs) {
