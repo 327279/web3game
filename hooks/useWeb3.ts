@@ -272,15 +272,16 @@ const useWeb3 = () => {
       }
 
       let betPlacedEvent = null;
+      const betPlacedEventTopic = chadFlipContract.interface.getEvent('BetPlaced').topicHash;
+
       for (const log of receipt.logs) {
-        try {
-          const parsedLog = chadFlipContract.interface.parseLog(log);
-          if (parsedLog && parsedLog.name === "BetPlaced") {
-            betPlacedEvent = parsedLog;
+        if (log.topics[0] === betPlacedEventTopic) {
+          try {
+            betPlacedEvent = chadFlipContract.interface.parseLog(log);
             break;
+          } catch (e) {
+            console.warn("Found BetPlaced event topic but failed to parse log:", log, e);
           }
-        } catch (e) {
-          continue;
         }
       }
 
@@ -324,15 +325,16 @@ const useWeb3 = () => {
           }
 
           let betResolvedEvent = null;
+          const betResolvedEventTopic = chadFlipContract.interface.getEvent('BetResolved').topicHash;
+
           for (const log of receipt.logs) {
-            try {
-              const parsedLog = chadFlipContract.interface.parseLog(log);
-              if (parsedLog && parsedLog.name === "BetResolved") {
-                betResolvedEvent = parsedLog;
+            if (log.topics[0] === betResolvedEventTopic) {
+              try {
+                betResolvedEvent = chadFlipContract.interface.parseLog(log);
                 break;
+              } catch (e) {
+                console.warn("Found BetResolved event topic but failed to parse log:", log, e);
               }
-            } catch (e) {
-              continue;
             }
           }
 
