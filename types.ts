@@ -13,6 +13,7 @@ export interface Bet {
   leverage: number;
   entryPrice: number;
   duration: number;
+  contractBetId?: bigint; // The ID of the bet from the smart contract
 }
 
 export interface BetResult {

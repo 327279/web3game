@@ -122,7 +122,7 @@ const useWeb3 = () => {
             dailyUsedResult,
         ] = await Promise.allSettled([
             chad.decimals(),
-            mon.decimals(),
+            (MON_TOKEN_ADDRESS !== ethers.ZeroAddress ? mon.decimals() : Promise.resolve(18)),
             chad.balanceOf(userAddress),
             provider.getBalance(userAddress), // Fetch native MON balance for display
             chadFlip.dailyBetLimit(),
@@ -253,11 +253,11 @@ const useWeb3 = () => {
       }
   }, [wallet, disconnect]);
   
-  const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>) => {
+  const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>): Promise<bigint | null> => {
     if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !primaryWallet) {
       setError("Please connect your wallet first.");
       setBettingStep('error');
-      return false;
+      return null;
     }
     setError(null);
     setLoading(true);
@@ -274,7 +274,14 @@ const useWeb3 = () => {
       }
 
       if (bet.leverage > 1) {
-          const collateralNeeded = ethers.parseUnits((bet.amount * bet.leverage).toString(), tokenDecimals.mon);
+          if (MON_TOKEN_ADDRESS === ethers.ZeroAddress) {
+              setError("Leverage Error: The MON Token Address is not configured. Please update it in `constants.ts`.");
+              setBettingStep('error');
+              setLoading(false);
+              return null;
+          }
+          // New, more affordable collateral calculation
+          const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
           
           const erc20MonBalance = await monTokenContract.balanceOf(userAddress);
           if (erc20MonBalance < collateralNeeded) {
@@ -283,7 +290,7 @@ const useWeb3 = () => {
               setError(`Insufficient MON collateral. You need ${needed} but have ${has} ERC20 MON.`);
               setBettingStep('error');
               setLoading(false);
-              return false;
+              return null;
           }
 
           const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
@@ -297,38 +304,66 @@ const useWeb3 = () => {
       setBettingStep('placing_bet');
       const predictionUp = bet.direction === 'UP';
 
-      setBalances(prev => ({
-          ...prev,
-          chad: prev.chad - bet.amount,
-      }));
-      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
-
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
-      await tx.wait();
+      const receipt = await tx.wait();
+
+      // Find the BetPlaced event in the transaction receipt to get the on-chain betId
+      const event = receipt.logs?.map((log: any) => chadFlipContract.interface.parseLog(log)).find((e: any) => e?.name === 'BetPlaced');
+      
+      if (!event) {
+          throw new Error("Could not find BetPlaced event in transaction receipt.");
+      }
+      const contractBetId = event.args.betId;
       
       setBettingStep('success');
-      return true;
+      // No optimistic updates here; let the event listener handle the data refresh.
+      return contractBetId;
+
     } catch (e: any) {
       console.error("Bet placement failed:", e);
-      refreshData();
+      refreshData(); // Refresh data to revert any optimistic updates if they existed
       setError(parseBlockchainError(e));
       setBettingStep('error');
-      return false;
+      return null;
     } finally {
       setLoading(false);
     }
   };
+  
+  const resolveBet = async (bet: Bet, finalPrice: number): Promise<BetResult | null> => {
+      if (!chadFlipContract || !bet.contractBetId) {
+          setError("Cannot resolve bet: contract not ready or bet ID is missing.");
+          return null;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+          const priceWentUp = finalPrice > bet.entryPrice;
+          const tx = await chadFlipContract.resolveBet(bet.contractBetId, priceWentUp);
+          const receipt = await tx.wait();
+          
+          const event = receipt.logs?.map((log: any) => chadFlipContract.interface.parseLog(log)).find((e: any) => e?.name === 'BetResolved');
 
-  const resolveBetFrontend = (bet: Bet, finalPrice: number): BetResult => {
-    const priceWentUp = finalPrice > bet.entryPrice;
-    const playerWon = (bet.direction === 'UP' && priceWentUp) || (bet.direction === 'DOWN' && !priceWentUp);
+          if (!event) {
+              // This should ideally not happen if the transaction succeeded.
+              // We can rely on the event listener to refresh data, but we can't show the result screen.
+              console.error("Could not find BetResolved event in transaction receipt.");
+              return { won: false, payout: 0 }; // Return a neutral result.
+          }
 
-    let payout = 0;
-    if (playerWon) {
-        payout = bet.amount + (bet.amount * bet.leverage * 0.95);
-        setBalances(prev => ({ ...prev, chad: prev.chad + payout }));
-    }
-    return { won: playerWon, payout };
+          const { won, payoutAmount } = event.args;
+          return {
+              won: won,
+              payout: formatBalance(payoutAmount, tokenDecimals.chad)
+          };
+
+      } catch (e: any) {
+          console.error("Bet resolution failed:", e);
+          setError(parseBlockchainError(e));
+          return null;
+      } finally {
+          setLoading(false);
+      }
   };
 
   return { 
@@ -338,12 +373,12 @@ const useWeb3 = () => {
     balances, 
     dailyLimit, 
     placeBet, 
+    resolveBet,
     loading: connecting || loading, 
     error, 
     refreshData, 
     bettingStep, 
     setBettingStep,
-    resolveBetFrontend,
   };
 };
 

@@ -2,15 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bet } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import ChartTooltip from './ChartTooltip';
+import SpinnerIcon from './icons/SpinnerIcon';
 
 interface WaitingViewProps {
   bet: Bet;
-  onResolution: (finalPrice: number) => void;
+  onResolution: (finalPrice: number) => Promise<void>;
   currentPrice: number;
 }
 
 const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPrice }) => {
   const [countdown, setCountdown] = useState(bet.duration);
+  const [isResolving, setIsResolving] = useState(false);
   const [priceHistory, setPriceHistory] = useState([{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), price: bet.entryPrice }]);
   
   // Use a ref to store the latest currentPrice without causing re-renders or effect re-runs.
@@ -43,6 +45,7 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
+          setIsResolving(true);
           // Use the absolute latest price from the ref for resolution.
           onResolution(latestPriceRef.current);
           return 0;
@@ -109,7 +112,16 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-center mt-4 text-brand-text animate-pulse">Waiting for round to end...</p>
+        <div className="text-center mt-4 text-brand-text h-6">
+          {isResolving ? (
+              <div className="flex items-center justify-center gap-2 animate-fade-in">
+                  <SpinnerIcon className="animate-spin w-5 h-5" />
+                  <span>Resolving on-chain...</span>
+              </div>
+          ) : countdown > 0 ? (
+              <p className="animate-pulse">Waiting for round to end...</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

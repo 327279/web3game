@@ -66,12 +66,12 @@ function MainApp() {
     balances,
     dailyLimit,
     placeBet,
+    resolveBet,
     loading,
     error,
     refreshData,
     bettingStep,
     setBettingStep,
-    resolveBetFrontend,
   } = useWeb3();
 
   const { priceHistory, currentPrice } = usePriceFeed(108540.00);
@@ -81,24 +81,32 @@ function MainApp() {
     preloadSounds();
   }, []);
 
-  const handlePlaceBet = useCallback(async (bet: Omit<Bet, 'entryPrice' | 'id'>): Promise<boolean> => {
-    const betWithPrice: Bet = { ...bet, entryPrice: currentPrice, id: Date.now() };
-    const success = await placeBet(betWithPrice);
-    if (success) {
+  const handlePlaceBet = useCallback(async (bet: Omit<Bet, 'entryPrice' | 'id' | 'contractBetId'>): Promise<boolean> => {
+    const betWithPrice: Omit<Bet, 'contractBetId'> = { ...bet, entryPrice: currentPrice, id: Date.now() };
+    const contractBetId = await placeBet(betWithPrice);
+    
+    if (contractBetId !== null) {
       playSound('placeBet');
-      setCurrentBet(betWithPrice);
+      setCurrentBet({ ...betWithPrice, contractBetId });
       setGameState(GameState.WAITING);
+      return true;
     }
-    return success;
+    return false;
   }, [currentPrice, placeBet]);
 
-  const handleResolution = useCallback((finalPrice: number) => {
+  const handleResolution = useCallback(async (finalPrice: number) => {
     if (!currentBet) return;
     
-    const result = resolveBetFrontend(currentBet, finalPrice);
-    setBetResult(result);
-    setGameState(GameState.RESULT);
-  }, [currentBet, resolveBetFrontend]);
+    const result = await resolveBet(currentBet, finalPrice);
+    if (result) {
+        setBetResult(result);
+        setGameState(GameState.RESULT);
+    } else {
+        // If resolution fails, go back to betting view to show the error
+        // The error is already set in the useWeb3 hook
+        setGameState(GameState.BETTING);
+    }
+  }, [currentBet, resolveBet]);
 
   const handlePlayAgain = useCallback(() => {
     setCurrentBet(null);
