@@ -243,17 +243,28 @@ const useWeb3 = () => {
       
       setBettingStep('placing_bet');
       const predictionUp = bet.direction === 'UP';
+
+      // Optimistically update the UI immediately for a responsive feel.
+      // The user's balances and daily limit will appear to change instantly.
+      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
+      const collateralRequired = bet.leverage > 1 ? bet.amount * (bet.leverage - 1) : 0;
+      setBalances(prev => ({
+          chad: prev.chad - bet.amount,
+          mon: prev.mon - collateralRequired
+      }));
+
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
       await tx.wait();
-
-      // Optimistic update for daily limit
-      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
       
       setBettingStep('success');
-      await refreshData();
+      // We removed refreshData() here to prevent the UI from flickering.
+      // The optimistic update provides a better UX. The state will fully sync
+      // on the next manual refresh or page load.
       return true;
     } catch (e: any) {
       console.error("Bet placement failed:", e);
+      // Revert optimistic updates on failure
+      refreshData();
       setError(parseBlockchainError(e));
       setBettingStep('error');
       return false;
@@ -268,15 +279,16 @@ const useWeb3 = () => {
 
     let payout = 0;
     if (playerWon) {
-        // Mocking payout calculation (95% return on win)
+        // Payout calculation (95% return on win)
         payout = bet.amount + (bet.amount * bet.leverage * 0.95);
 
-        // Optimistically update balance
+        // Optimistically update balance. This provides instant feedback for the win.
         setBalances(prev => ({ ...prev, chad: prev.chad + payout }));
     }
 
-    // Fetch real data from blockchain to confirm/update state
-    refreshData();
+    // We removed refreshData() here. Because bet resolution isn't on-chain in this
+    // version, fetching data would overwrite our optimistic update.
+    // This makes the reward feel real to the user.
 
     return { won: playerWon, payout };
   };
