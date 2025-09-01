@@ -23,9 +23,10 @@ interface BettingViewProps {
   error: string | null;
   bettingStep: BettingStep;
   setBettingStep: (step: BettingStep) => void;
+  onRefresh: () => void;
 }
 
-const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep }) => {
+const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [duration, setDuration] = useState<number>(60);
@@ -178,6 +179,11 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
     handleUserInteraction();
   };
 
+  const handleRefreshData = () => {
+    playSound('click');
+    onRefresh();
+  };
+
   const isButtonDisabled = !isWalletConnected || loading || parseFloat(betAmount) <= 0 || isNaN(parseFloat(betAmount));
 
   const formatVolume = (volume: number) => {
@@ -271,7 +277,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               <Tooltip text="This is the maximum amount of CHAD you can bet in a 24-hour period. It resets daily.">
                   <div className="flex justify-between items-center cursor-help">
                       <p className="text-sm text-brand-text">Daily Bet Limit</p>
-                      <button className="text-brand-text hover:text-white transition transform hover:scale-110" onClick={() => playSound('click')}><RefreshIcon className="w-4 h-4" /></button>
+                      <button className="text-brand-text hover:text-white transition transform hover:scale-110" onClick={handleRefreshData}><RefreshIcon className="w-4 h-4" /></button>
                   </div>
               </Tooltip>
               <p className="text-xl sm:text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>

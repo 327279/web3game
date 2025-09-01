@@ -111,19 +111,20 @@ const useWeb3 = () => {
     setError(null);
     try {
         const userAddress = await currentSigner.getAddress();
+        const provider = currentSigner.provider;
         
         const [
             chadDecimalsResult,
             monDecimalsResult,
             chadBalanceResult,
-            monBalanceResult,
+            nativeMonBalanceResult,
             dailyLimitResult,
             dailyUsedResult,
         ] = await Promise.allSettled([
             chad.decimals(),
             mon.decimals(),
             chad.balanceOf(userAddress),
-            mon.balanceOf(userAddress), // Fetch ERC20 MON balance for collateral
+            provider.getBalance(userAddress), // Fetch native MON balance for display
             chadFlip.dailyBetLimit(),
             chadFlip.dailyBetAmount(userAddress),
         ]);
@@ -135,7 +136,7 @@ const useWeb3 = () => {
 
         const newBalances: Balances = { chad: 0, mon: 0 };
         if (chadBalanceResult.status === 'fulfilled') newBalances.chad = formatBalance(chadBalanceResult.value, newDecimals.chad);
-        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, newDecimals.mon);
+        if (nativeMonBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(nativeMonBalanceResult.value, 18);
         setBalances(newBalances);
 
         const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
@@ -234,8 +235,18 @@ const useWeb3 = () => {
       }
 
       if (bet.leverage > 1) {
-          // As requested, collateral is calculated as: Bet Amount * Leverage
           const collateralNeeded = ethers.parseUnits((bet.amount * bet.leverage).toString(), tokenDecimals.mon);
+          
+          const erc20MonBalance = await monTokenContract.balanceOf(userAddress);
+          if (erc20MonBalance < collateralNeeded) {
+              const needed = ethers.formatUnits(collateralNeeded, tokenDecimals.mon);
+              const has = ethers.formatUnits(erc20MonBalance, tokenDecimals.mon);
+              setError(`Insufficient MON collateral. You need ${needed} but have ${has} ERC20 MON.`);
+              setBettingStep('error');
+              setLoading(false);
+              return false;
+          }
+
           const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
           if (currentMonAllowance < collateralNeeded) {
             setBettingStep('approving_mon');
@@ -247,11 +258,9 @@ const useWeb3 = () => {
       setBettingStep('placing_bet');
       const predictionUp = bet.direction === 'UP';
 
-      // Optimistically update the UI immediately for a responsive feel.
-      const collateralRequired = bet.leverage > 1 ? bet.amount * bet.leverage : 0;
       setBalances(prev => ({
+          ...prev,
           chad: prev.chad - bet.amount,
-          mon: prev.mon - collateralRequired
       }));
       setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
 
@@ -259,13 +268,9 @@ const useWeb3 = () => {
       await tx.wait();
       
       setBettingStep('success');
-      // We removed refreshData() here to prevent the UI from flickering.
-      // The optimistic update provides a better UX. The state will fully sync
-      // on the next manual refresh or page load.
       return true;
     } catch (e: any) {
       console.error("Bet placement failed:", e);
-      // Revert optimistic updates on failure
       refreshData();
       setError(parseBlockchainError(e));
       setBettingStep('error');
@@ -281,17 +286,9 @@ const useWeb3 = () => {
 
     let payout = 0;
     if (playerWon) {
-        // Payout calculation (95% return on win)
         payout = bet.amount + (bet.amount * bet.leverage * 0.95);
-
-        // Optimistically update balance. This provides instant feedback for the win.
         setBalances(prev => ({ ...prev, chad: prev.chad + payout }));
     }
-
-    // We removed refreshData() here. Because bet resolution isn't on-chain in this
-    // version, fetching data would overwrite our optimistic update.
-    // This makes the reward feel real to the user.
-
     return { won: playerWon, payout };
   };
 

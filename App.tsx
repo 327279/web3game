@@ -127,6 +127,7 @@ function MainApp() {
             error={error}
             bettingStep={bettingStep}
             setBettingStep={setBettingStep}
+            onRefresh={refreshData}
           />
         );
     }
