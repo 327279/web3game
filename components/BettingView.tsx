@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Balances, DailyLimit, BetDirection, BettingStep, MarketData } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Balances, DailyLimit, BetDirection, BettingStep, MarketData, Bet } from '../types';
 import PriceChart from './PriceChart';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -9,6 +9,7 @@ import Tooltip from './Tooltip';
 import ConfirmationModal from './ConfirmationModal';
 import SparklineChart from './SparklineChart';
 import SpinnerIcon from './icons/SpinnerIcon';
+import ZoomOutIcon from './icons/ZoomOutIcon';
 
 interface BettingViewProps {
   priceHistory: { time: string; price: number }[];
@@ -32,10 +33,33 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [displayError, setDisplayError] = useState<string | null>(null);
   const [submittedDirection, setSubmittedDirection] = useState<BetDirection | null>(null);
 
+  const [zoomedData, setZoomedData] = useState(priceHistory);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [brushKey, setBrushKey] = useState(0);
+
   useEffect(() => {
     // When a new error comes from the hook, display it.
     setDisplayError(error);
   }, [error]);
+
+  useEffect(() => {
+    if (!isZoomed) {
+      setZoomedData(priceHistory);
+    }
+  }, [priceHistory, isZoomed]);
+
+  const handleZoom = (domain: { startIndex?: number, endIndex?: number }) => {
+    if (domain && typeof domain.startIndex === 'number' && typeof domain.endIndex === 'number') {
+        setZoomedData(priceHistory.slice(domain.startIndex, domain.endIndex + 1));
+        setIsZoomed(true);
+    }
+  };
+
+  const resetZoom = () => {
+      playSound('click');
+      setIsZoomed(false);
+      setBrushKey(k => k + 1);
+  };
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [betToConfirm, setBetToConfirm] = useState<{ direction: BetDirection, amount: number, leverage: number, duration: number} | null>(null);
@@ -53,6 +77,22 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
     if (isNaN(amount) || amount <= 0 || leverage <= 1) return 0;
     return amount * (leverage - 1);
   }, [betAmount, leverage]);
+
+  const draftBet = useMemo<Bet | null>(() => {
+    const amount = parseFloat(betAmount);
+    if (isNaN(amount) || amount <= 0 || !isWalletConnected) {
+        return null;
+    }
+    
+    return {
+        id: -1,
+        direction,
+        amount,
+        leverage,
+        entryPrice: currentPrice,
+        duration,
+    };
+  }, [betAmount, isWalletConnected, direction, leverage, currentPrice, duration]);
 
   const initiatePlaceBet = () => {
     playSound('click');
@@ -178,9 +218,30 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
             </div>
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
-            <p className="text-sm text-brand-text">BTC PRICE</p>
-            <p className="text-3xl sm:text-4xl font-bold text-white mb-2">${currentPrice.toFixed(4)}</p>
-            <PriceChart data={priceHistory} currentPrice={currentPrice} />
+            <div className="flex justify-between items-center mb-2">
+                <div>
+                    <p className="text-sm text-brand-text">BTC PRICE</p>
+                    <p className="text-3xl sm:text-4xl font-bold text-white">${currentPrice.toFixed(4)}</p>
+                </div>
+                {isZoomed && (
+                    <button 
+                        onClick={resetZoom} 
+                        className="flex items-center gap-2 text-brand-text hover:text-white bg-brand-light-gray px-3 py-1 rounded-lg transition-colors text-sm animate-fade-in"
+                        aria-label="Reset chart zoom"
+                    >
+                        <ZoomOutIcon className="w-4 h-4" />
+                        Reset Zoom
+                    </button>
+                )}
+            </div>
+            <PriceChart 
+              data={zoomedData} 
+              fullData={priceHistory}
+              currentPrice={currentPrice}
+              onZoom={handleZoom}
+              brushKey={brushKey}
+              draftBet={draftBet}
+            />
           </div>
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
              <p className="text-sm text-brand-text mb-4">YOUR ASSETS</p>

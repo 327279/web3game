@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
+import { init } from '@web3-onboard/react';
+import injectedModule from '@web3-onboard/injected-wallets';
+import walletConnectModule from '@web3-onboard/walletconnect';
 import { GameState, Bet, BetResult } from './types';
 import useWeb3 from './hooks/useWeb3';
 import usePriceFeed from './hooks/usePriceFeed';
@@ -9,43 +11,46 @@ import BettingView from './components/BettingView';
 import WaitingView from './components/WaitingView';
 import ResultView from './components/ResultView';
 import { playSound, preloadSounds } from './utils/sound';
-import { WALLETCONNECT_PROJECT_ID, MONAD_TESTNET_CONFIG, MONAD_TESTNET_CHAIN_ID } from './constants';
+import { WALLETCONNECT_PROJECT_ID, MONAD_TESTNET_CONFIG, MONAD_TESTNET_CHAIN_ID, MONAD_TESTNET_HEX_CHAIN_ID } from './constants';
 import ConfigurationError from './components/ConfigurationError';
 
-// 1. Get projectID from WalletConnect Cloud
 const projectId: string = WALLETCONNECT_PROJECT_ID;
 const isConfigured = projectId && projectId !== 'GET_YOUR_OWN_PROJECT_ID_FROM_WALLETCONNECT_CLOUD';
 
-// Conditionally initialize Web3Modal at the top level
 if (isConfigured) {
-  // 2. Configure metadata
-  const metadata = {
-    name: 'ChadFlip Web3 Game',
-    description: 'A Web3 betting game on the Monad Testnet.',
-    url: window.location.origin, // origin must match your domain & subdomain
-    icons: ['https://avatars.githubusercontent.com/u/37784886']
-  };
-  
-  // 3. Create modal
-  const monadTestnet = {
-    chainId: Number(MONAD_TESTNET_CHAIN_ID),
-    name: MONAD_TESTNET_CONFIG.chainName,
-    currency: MONAD_TESTNET_CONFIG.nativeCurrency.symbol,
-    explorerUrl: MONAD_TESTNET_CONFIG.blockExplorerUrls[0] || 'https://monad.xyz',
-    rpcUrl: MONAD_TESTNET_CONFIG.rpcUrls[0]
-  };
-  
-  createWeb3Modal({
-    ethersConfig: defaultConfig({ metadata }),
-    chains: [monadTestnet],
+  const injected = injectedModule();
+  const walletConnect = walletConnectModule({
     projectId,
-    defaultChain: monadTestnet,
-    enableAnalytics: false,
-    // Fix: The `siweConfig` property is now required by `createWeb3Modal`.
-    // We disable it as Sign-In with Ethereum is not used in this application.
-    siweConfig: {
-      enabled: false,
+    requiredChains: [Number(MONAD_TESTNET_CHAIN_ID)],
+  });
+  
+  const monadTestnetChain = {
+    id: MONAD_TESTNET_HEX_CHAIN_ID,
+    token: MONAD_TESTNET_CONFIG.nativeCurrency.symbol,
+    label: MONAD_TESTNET_CONFIG.chainName,
+    rpcUrl: MONAD_TESTNET_CONFIG.rpcUrls[0],
+  };
+
+  const appIcon = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1e1f22"></path><path d="M24 38C16.268 38 10 31.732 10 24C10 16.268 16.268 10 24 10C31.732 10 38 16.268 38 24C38 31.732 31.732 38 24 38Z" fill="#a8ff00"></path><path d="M24 34C18.4772 34 14 29.5228 14 24C14 18.4772 18.4772 14 24 14C29.5228 14 34 18.4772 34 24C34 29.5228 29.5228 34 24 34Z" fill="#131313"></path><path d="M27 18H21V24H27V30H21" stroke="#a8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
+
+  init({
+    wallets: [injected, walletConnect],
+    chains: [monadTestnetChain],
+    appMetadata: {
+      name: 'ChadFlip Web3 Game',
+      icon: appIcon,
+      description: 'A Web3 betting game on the Monad Testnet.',
+      recommendedInjectedWallets: [
+        { name: 'MetaMask', url: 'https://metamask.io' },
+      ]
     },
+    accountCenter: {
+      desktop: { enabled: false },
+      mobile: { enabled: false }
+    },
+    connect: {
+        autoConnectLastWallet: true
+    }
   });
 }
   

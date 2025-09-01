@@ -7,9 +7,10 @@ interface ChartTooltipProps {
   label?: string;
   priceDecimalPlaces?: number;
   bet?: Bet | null;
+  isPreview?: boolean;
 }
 
-const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, priceDecimalPlaces = 2, bet }) => {
+const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, priceDecimalPlaces = 2, bet, isPreview = false }) => {
   if (active && payload && payload.length) {
     const dataPoint = payload[0];
     const price = dataPoint.value as number;
@@ -32,14 +33,16 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, pri
         }
     }
 
+    const pnlPrefix = isPreview ? 'Preview' : 'Potential';
+
     return (
       <div className="p-2 bg-brand-dark border border-brand-light-gray rounded-md shadow-lg text-sm">
         <p className="text-brand-text">{`Time: ${time}`}</p>
         <p className="font-bold text-white">{`Price: $${Number(price).toFixed(priceDecimalPlaces)}`}</p>
         {pnl !== null && (
             <div className={`font-bold mt-1 pt-1 border-t border-brand-light-gray ${pnl >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
-                {pnl > 0 && `Potential Win: +${pnl.toFixed(2)} CHAD`}
-                {pnl < 0 && `Potential Loss: ${pnl.toFixed(2)} CHAD`}
+                {pnl > 0 && `${pnlPrefix} Win: +${pnl.toFixed(2)} CHAD`}
+                {pnl < 0 && `${pnlPrefix} Loss: ${pnl.toFixed(2)} CHAD`}
                 {pnl === 0 && `Break Even`}
             </div>
         )}

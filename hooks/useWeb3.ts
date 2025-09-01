@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { useWeb3Modal, useWeb3ModalProvider, useWeb3ModalAccount, useDisconnect } from '@web3modal/ethers/react';
+import { useConnectWallet, useWallets } from '@web3-onboard/react';
 import { Balances, DailyLimit, Bet, BettingStep } from '../types';
 import { 
     CHADFLIP_CONTRACT_ADDRESS, 
@@ -82,14 +82,12 @@ const parseBlockchainError = (error: any): string => {
 };
 
 /**
- * A hook to manage all Web3 interactions, using Web3Modal for wallet connection.
+ * A hook to manage all Web3 interactions, using Web3-Onboard for wallet connection.
  */
 const useWeb3 = () => {
-  // Web3Modal hooks
-  const { open } = useWeb3Modal();
-  const { address, chainId, isConnected } = useWeb3ModalAccount();
-  const { walletProvider } = useWeb3ModalProvider();
-  const { disconnect: w3mDisconnect } = useDisconnect();
+  // Web3-Onboard hooks
+  const [{ wallet, connecting }, connect, disconnect] = useConnectWallet();
+  const connectedWallets = useWallets();
 
   // Application state
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
@@ -148,12 +146,25 @@ const useWeb3 = () => {
     }
   }, []);
 
+  const primaryWallet = useMemo(() => connectedWallets[0], [connectedWallets]);
+
   // Effect to initialize provider, signer, and contracts when wallet connects or disconnects
   useEffect(() => {
     const setup = async () => {
-      if (isConnected && walletProvider && address && chainId === Number(MONAD_TESTNET_CHAIN_ID)) {
+      if (primaryWallet) {
+        const connectedChainId = parseInt(primaryWallet.chains[0].id, 16);
+        
+        if (connectedChainId !== Number(MONAD_TESTNET_CHAIN_ID)) {
+          setError("Wrong network. Please switch to Monad Testnet in your wallet.");
+          setSigner(null);
+          setChadFlipContract(null);
+          setChadTokenContract(null);
+          setMonTokenContract(null);
+          return;
+        }
+
         setError(null);
-        const ethersProvider = new ethers.BrowserProvider(walletProvider);
+        const ethersProvider = new ethers.BrowserProvider(primaryWallet.provider, 'any');
         const currentSigner = await ethersProvider.getSigner();
         setSigner(currentSigner);
 
@@ -166,8 +177,6 @@ const useWeb3 = () => {
         setMonTokenContract(mon);
         
         await fetchContractData(currentSigner, chadFlip, chad, mon);
-      } else if (isConnected && chainId !== Number(MONAD_TESTNET_CHAIN_ID)) {
-        setError("Wrong network. Please switch to Monad Testnet in your wallet.");
       } else {
         // Handle disconnection: clear all web3 state
         setError(null);
@@ -180,16 +189,18 @@ const useWeb3 = () => {
       }
     };
     setup();
-  }, [isConnected, walletProvider, address, chainId, fetchContractData]);
+  }, [primaryWallet, fetchContractData]);
 
   const openModal = useCallback(() => {
     setError(null);
-    open();
-  }, [open]);
+    connect();
+  }, [connect]);
 
-  const disconnect = useCallback(() => {
-      w3mDisconnect();
-  }, [w3mDisconnect]);
+  const doDisconnect = useCallback(() => {
+      if (wallet) {
+          disconnect(wallet);
+      }
+  }, [wallet, disconnect]);
   
   const refreshData = useCallback(() => {
     if(signer && chadFlipContract && chadTokenContract && monTokenContract){
@@ -198,7 +209,7 @@ const useWeb3 = () => {
   }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
 
   const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>) => {
-    if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !address) {
+    if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !primaryWallet) {
       setError("Please connect your wallet first.");
       setBettingStep('error');
       return false;
@@ -208,8 +219,9 @@ const useWeb3 = () => {
 
     try {
       const amount = ethers.parseUnits(bet.amount.toString(), tokenDecimals.chad);
+      const userAddress = primaryWallet.accounts[0].address;
       
-      const currentChadAllowance = await chadTokenContract.allowance(address, CHADFLIP_CONTRACT_ADDRESS);
+      const currentChadAllowance = await chadTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
       if (currentChadAllowance < amount) {
         setBettingStep('approving_chad');
         const approveTx = await chadTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, amount);
@@ -218,7 +230,7 @@ const useWeb3 = () => {
 
       if (bet.leverage > 1) {
           const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
-          const currentMonAllowance = await monTokenContract.allowance(address, CHADFLIP_CONTRACT_ADDRESS);
+          const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
           if (currentMonAllowance < collateralNeeded) {
             setBettingStep('approving_mon');
             const approveMonTx = await monTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, collateralNeeded);
@@ -244,16 +256,16 @@ const useWeb3 = () => {
     }
   };
 
-  const memoizedAddress = useMemo(() => address, [address]);
+  const address = useMemo(() => primaryWallet?.accounts[0]?.address, [primaryWallet]);
 
   return { 
     openModal,
-    disconnect, 
-    address: memoizedAddress, 
+    disconnect: doDisconnect, 
+    address, 
     balances, 
     dailyLimit, 
     placeBet, 
-    loading, 
+    loading: connecting || loading, 
     error, 
     refreshData, 
     bettingStep, 
