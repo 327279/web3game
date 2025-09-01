@@ -75,7 +75,8 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const collateralRequired = useMemo(() => {
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0 || leverage <= 1) return 0;
-    return amount * (leverage - 1);
+    // As requested, collateral is now calculated as: Bet Amount * Leverage
+    return amount * leverage;
   }, [betAmount, leverage]);
 
   const draftBet = useMemo<Bet | null>(() => {

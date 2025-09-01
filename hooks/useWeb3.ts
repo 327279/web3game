@@ -106,34 +106,36 @@ const useWeb3 = () => {
       return parseFloat(ethers.formatUnits(balance, decimals));
   };
 
-  const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract) => {
+  const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract, mon: ethers.Contract) => {
     setLoading(true);
     setError(null);
     try {
-        const provider = currentSigner.provider;
         const userAddress = await currentSigner.getAddress();
         
         const [
             chadDecimalsResult,
+            monDecimalsResult,
             chadBalanceResult,
             monBalanceResult,
             dailyLimitResult,
             dailyUsedResult,
         ] = await Promise.allSettled([
             chad.decimals(),
+            mon.decimals(),
             chad.balanceOf(userAddress),
-            provider.getBalance(userAddress), // Fetch native MON balance
+            mon.balanceOf(userAddress), // Fetch ERC20 MON balance for collateral
             chadFlip.dailyBetLimit(),
             chadFlip.dailyBetAmount(userAddress),
         ]);
         
         const newDecimals = { chad: 18, mon: 18 };
         if (chadDecimalsResult.status === 'fulfilled') newDecimals.chad = Number(chadDecimalsResult.value);
+        if (monDecimalsResult.status === 'fulfilled') newDecimals.mon = Number(monDecimalsResult.value);
         setTokenDecimals(newDecimals);
 
         const newBalances: Balances = { chad: 0, mon: 0 };
         if (chadBalanceResult.status === 'fulfilled') newBalances.chad = formatBalance(chadBalanceResult.value, newDecimals.chad);
-        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, 18); // Use 18 for native MON
+        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, newDecimals.mon);
         setBalances(newBalances);
 
         const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
@@ -179,7 +181,7 @@ const useWeb3 = () => {
         setChadTokenContract(chad);
         setMonTokenContract(mon);
         
-        await fetchContractData(currentSigner, chadFlip, chad);
+        await fetchContractData(currentSigner, chadFlip, chad, mon);
       } else {
         // Handle disconnection: clear all web3 state
         setError(null);
@@ -206,10 +208,10 @@ const useWeb3 = () => {
   }, [wallet, disconnect]);
   
   const refreshData = useCallback(() => {
-    if(signer && chadFlipContract && chadTokenContract){
-      fetchContractData(signer, chadFlipContract, chadTokenContract);
+    if(signer && chadFlipContract && chadTokenContract && monTokenContract){
+      fetchContractData(signer, chadFlipContract, chadTokenContract, monTokenContract);
     }
-  }, [signer, chadFlipContract, chadTokenContract, fetchContractData]);
+  }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
 
   const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>) => {
     if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !primaryWallet) {
@@ -232,7 +234,8 @@ const useWeb3 = () => {
       }
 
       if (bet.leverage > 1) {
-          const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
+          // As requested, collateral is calculated as: Bet Amount * Leverage
+          const collateralNeeded = ethers.parseUnits((bet.amount * bet.leverage).toString(), tokenDecimals.mon);
           const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
           if (currentMonAllowance < collateralNeeded) {
             setBettingStep('approving_mon');
@@ -245,13 +248,12 @@ const useWeb3 = () => {
       const predictionUp = bet.direction === 'UP';
 
       // Optimistically update the UI immediately for a responsive feel.
-      // The user's balances and daily limit will appear to change instantly.
-      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
-      const collateralRequired = bet.leverage > 1 ? bet.amount * (bet.leverage - 1) : 0;
+      const collateralRequired = bet.leverage > 1 ? bet.amount * bet.leverage : 0;
       setBalances(prev => ({
           chad: prev.chad - bet.amount,
           mon: prev.mon - collateralRequired
       }));
+      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
 
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
       await tx.wait();
