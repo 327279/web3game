@@ -6,17 +6,21 @@ export const WALLETCONNECT_PROJECT_ID = '8f6bb6cc7777e497f917e996e40a11ac';
 
 
 // ===================================================================================
-// === IMPORTANT: COMPILE AND DEPLOY THE NEW `ChadFlip.sol` CONTRACT ===
-// === AND PASTE THE NEW CONTRACT ADDRESS HERE ===
+// === IMPORTANT: DEPLOY THE NEW `ChadFlip.sol` CONTRACT AND PASTE THE ADDRESS HERE ===
 // ===================================================================================
-export const CHADFLIP_CONTRACT_ADDRESS = "0x69161B0169c1A78CeA8ADaBd27a54692705b4974"; // <-- NEW DEPLOYED ADDRESS
+export const CHADFLIP_CONTRACT_ADDRESS = "0x69161B0169c1A78CeA8ADaBd27a54692705b4974"; // <-- Replace with your new address after deploying
 // ===================================================================================
 
+// This is your primary betting token. Ensure this address is correct.
 export const CHAD_TOKEN_ADDRESS = "0x2bb4219b8e85c111613f3ee192a115676f230d35";
 
-// IMPORTANT: Replace this with the REAL MON token address on Monad Testnet
-// If you don't know it, you can leave the placeholder, but leverage > 1x will fail.
+// ===================================================================================
+// === CRITICAL: Replace this placeholder with your REAL MON ERC20 token address. ===
+// === Using a placeholder or the zero address WILL cause leveraged bets to fail. ===
+// ===================================================================================
 export const MON_TOKEN_ADDRESS = "0x0000000000000000000000000000000000000000";
+// ===================================================================================
+
 
 // --- Monad Testnet Configuration ---
 export const MONAD_TESTNET_CHAIN_ID = 10143n;
