@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { useConnectWallet, useWallets } from '@web3-onboard/react';
-import { Balances, DailyLimit, Bet, BettingStep } from '../types';
+import { Balances, DailyLimit, Bet, BettingStep, BetResult } from '../types';
 import { 
     CHADFLIP_CONTRACT_ADDRESS, 
     CHAD_TOKEN_ADDRESS, 
@@ -106,31 +106,34 @@ const useWeb3 = () => {
       return parseFloat(ethers.formatUnits(balance, decimals));
   };
 
-  const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract, mon: ethers.Contract) => {
+  const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract) => {
     setLoading(true);
     setError(null);
     try {
+        const provider = currentSigner.provider;
         const userAddress = await currentSigner.getAddress();
         
-        const results = await Promise.allSettled([
+        const [
+            chadDecimalsResult,
+            chadBalanceResult,
+            monBalanceResult,
+            dailyLimitResult,
+            dailyUsedResult,
+        ] = await Promise.allSettled([
             chad.decimals(),
             chad.balanceOf(userAddress),
-            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.decimals() : Promise.resolve(18),
-            MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000" ? mon.balanceOf(userAddress) : Promise.resolve(0n),
+            provider.getBalance(userAddress), // Fetch native MON balance
             chadFlip.dailyBetLimit(),
             chadFlip.dailyBetAmount(userAddress),
         ]);
-
-        const [ chadDecimalsResult, chadBalanceResult, monDecimalsResult, monBalanceResult, dailyLimitResult, dailyUsedResult ] = results;
         
         const newDecimals = { chad: 18, mon: 18 };
         if (chadDecimalsResult.status === 'fulfilled') newDecimals.chad = Number(chadDecimalsResult.value);
-        if (monDecimalsResult.status === 'fulfilled') newDecimals.mon = Number(monDecimalsResult.value);
         setTokenDecimals(newDecimals);
 
         const newBalances: Balances = { chad: 0, mon: 0 };
         if (chadBalanceResult.status === 'fulfilled') newBalances.chad = formatBalance(chadBalanceResult.value, newDecimals.chad);
-        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, newDecimals.mon);
+        if (monBalanceResult.status === 'fulfilled') newBalances.mon = formatBalance(monBalanceResult.value, 18); // Use 18 for native MON
         setBalances(newBalances);
 
         const newDailyLimit: DailyLimit = { used: 0, limit: 5000 };
@@ -176,7 +179,7 @@ const useWeb3 = () => {
         setChadTokenContract(chad);
         setMonTokenContract(mon);
         
-        await fetchContractData(currentSigner, chadFlip, chad, mon);
+        await fetchContractData(currentSigner, chadFlip, chad);
       } else {
         // Handle disconnection: clear all web3 state
         setError(null);
@@ -203,10 +206,10 @@ const useWeb3 = () => {
   }, [wallet, disconnect]);
   
   const refreshData = useCallback(() => {
-    if(signer && chadFlipContract && chadTokenContract && monTokenContract){
-      fetchContractData(signer, chadFlipContract, chadTokenContract, monTokenContract);
+    if(signer && chadFlipContract && chadTokenContract){
+      fetchContractData(signer, chadFlipContract, chadTokenContract);
     }
-  }, [signer, chadFlipContract, chadTokenContract, monTokenContract, fetchContractData]);
+  }, [signer, chadFlipContract, chadTokenContract, fetchContractData]);
 
   const placeBet = async (bet: Omit<Bet, 'id' | 'entryPrice'>) => {
     if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer || !primaryWallet) {
@@ -242,6 +245,9 @@ const useWeb3 = () => {
       const predictionUp = bet.direction === 'UP';
       const tx = await chadFlipContract.placeBet( CHAD_TOKEN_ADDRESS, amount, bet.leverage, predictionUp );
       await tx.wait();
+
+      // Optimistic update for daily limit
+      setDailyLimit(prev => ({ ...prev, used: prev.used + bet.amount }));
       
       setBettingStep('success');
       await refreshData();
@@ -254,6 +260,25 @@ const useWeb3 = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resolveBetFrontend = (bet: Bet, finalPrice: number): BetResult => {
+    const priceWentUp = finalPrice > bet.entryPrice;
+    const playerWon = (bet.direction === 'UP' && priceWentUp) || (bet.direction === 'DOWN' && !priceWentUp);
+
+    let payout = 0;
+    if (playerWon) {
+        // Mocking payout calculation (95% return on win)
+        payout = bet.amount + (bet.amount * bet.leverage * 0.95);
+
+        // Optimistically update balance
+        setBalances(prev => ({ ...prev, chad: prev.chad + payout }));
+    }
+
+    // Fetch real data from blockchain to confirm/update state
+    refreshData();
+
+    return { won: playerWon, payout };
   };
 
   const address = useMemo(() => primaryWallet?.accounts[0]?.address, [primaryWallet]);
@@ -269,7 +294,8 @@ const useWeb3 = () => {
     error, 
     refreshData, 
     bettingStep, 
-    setBettingStep 
+    setBettingStep,
+    resolveBetFrontend,
   };
 };
 

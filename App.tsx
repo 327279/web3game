@@ -71,6 +71,7 @@ function MainApp() {
     refreshData,
     bettingStep,
     setBettingStep,
+    resolveBetFrontend,
   } = useWeb3();
 
   const { priceHistory, currentPrice } = usePriceFeed(108540.00);
@@ -94,19 +95,10 @@ function MainApp() {
   const handleResolution = useCallback((finalPrice: number) => {
     if (!currentBet) return;
     
-    const priceWentUp = finalPrice > currentBet.entryPrice;
-    const playerWon = (currentBet.direction === 'UP' && priceWentUp) || (currentBet.direction === 'DOWN' && !priceWentUp);
-    
-    let payout = 0;
-    if(playerWon) {
-        // Mocking payout calculation (95% return on win)
-        payout = currentBet.amount + (currentBet.amount * currentBet.leverage * 0.95);
-    }
-
-    setBetResult({ won: playerWon, payout });
+    const result = resolveBetFrontend(currentBet, finalPrice);
+    setBetResult(result);
     setGameState(GameState.RESULT);
-    refreshData(); // Refresh user balances and limits after a bet resolves
-  }, [currentBet, refreshData]);
+  }, [currentBet, resolveBetFrontend]);
 
   const handlePlayAgain = useCallback(() => {
     setCurrentBet(null);
