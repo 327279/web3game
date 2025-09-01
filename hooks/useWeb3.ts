@@ -220,22 +220,18 @@ const useWeb3 = () => {
       const receipt = await tx.wait();
       
       if (!receipt || receipt.status === 0) {
-          throw new Error("Bet placement transaction failed. The contract reverted it.");
+          throw new Error("Transaction failed on-chain. The contract reverted it.");
       }
 
-      // Robust event parsing
-      for (const log of receipt.logs) {
-        try {
-          const parsedLog = chadFlipContract.interface.parseLog(log);
-          if (parsedLog && parsedLog.name === "BetPlaced") {
-            const contractBetId = parsedLog.args.betId;
-            setBettingStep('success');
-            refreshData();
-            return contractBetId;
-          }
-        } catch (e) {
-          // Ignore logs that are not from this contract's ABI
-        }
+      const betPlacedTopic = chadFlipContract.interface.getEvent("BetPlaced").topicHash;
+      const eventLog = receipt.logs.find(log => log.topics[0] === betPlacedTopic && log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase());
+
+      if (eventLog) {
+          const parsedLog = chadFlipContract.interface.parseLog({ topics: eventLog.topics as string[], data: eventLog.data });
+          const contractBetId = parsedLog.args.betId;
+          setBettingStep('success');
+          refreshData();
+          return contractBetId;
       }
 
       throw new Error('Could not find BetPlaced event in transaction receipt.');
@@ -266,20 +262,16 @@ const useWeb3 = () => {
             throw new Error("Bet resolution transaction failed. The contract reverted it.");
           }
 
-          // Robust event parsing
-          for (const log of receipt.logs) {
-            try {
-                const parsedLog = chadFlipContract.interface.parseLog(log);
-                if (parsedLog && parsedLog.name === "BetResolved") {
-                    const { won, payoutAmount } = parsedLog.args;
-                    return {
-                        won: won,
-                        payout: formatBalance(payoutAmount, tokenDecimals.chad)
-                    };
-                }
-            } catch (e) {
-                // Ignore other logs that don't match the ABI
-            }
+          const betResolvedTopic = chadFlipContract.interface.getEvent("BetResolved").topicHash;
+          const eventLog = receipt.logs.find(log => log.topics[0] === betResolvedTopic && log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase());
+
+          if (eventLog) {
+              const parsedLog = chadFlipContract.interface.parseLog({ topics: eventLog.topics as string[], data: eventLog.data });
+              const { won, payoutAmount } = parsedLog.args;
+              return {
+                  won: won,
+                  payout: formatBalance(payoutAmount, tokenDecimals.chad)
+              };
           }
           
           throw new Error("Could not confirm bet result from the blockchain.");
