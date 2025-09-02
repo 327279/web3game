@@ -7,6 +7,8 @@ import {
     CHAD_TOKEN_ADDRESS, 
     MON_TOKEN_ADDRESS, 
     MONAD_TESTNET_CHAIN_ID,
+    MONAD_TESTNET_HEX_CHAIN_ID,
+    MONAD_TESTNET_CONFIG,
     chadFlipContractABI, 
     erc20ABI 
 } from '../constants';
@@ -83,26 +85,48 @@ const useWeb3 = () => {
   const fetchContractData = useCallback(async (currentSigner: ethers.JsonRpcSigner, chadFlip: ethers.Contract, chad: ethers.Contract) => {
     setLoading(true);
     setError(null);
+    let fetchError = false;
     try {
         const userAddress = await currentSigner.getAddress();
         const provider = currentSigner.provider;
         
-        const [
-            chadDecimalsResult,
-            chadBalanceResult,
-            nativeMonBalanceResult,
-            dailyLimitResult,
-            dailyUsedResult,
-        ] = await Promise.allSettled([
+        const results = await Promise.allSettled([
             chad.decimals(),
             chad.balanceOf(userAddress),
             provider.getBalance(userAddress),
             chadFlip.dailyBetLimit(),
             chadFlip.getPlayerDailyUsed(userAddress),
         ]);
+
+        const [
+            chadDecimalsResult,
+            chadBalanceResult,
+            nativeMonBalanceResult,
+            dailyLimitResult,
+            dailyUsedResult,
+        ] = results;
+
+        const logAndFlagError = (name: string, result: PromiseSettledResult<any>): boolean => {
+            if (result.status === 'rejected') {
+                console.error(`Failed to fetch ${name} for address ${userAddress}:`, result.reason);
+                fetchError = true;
+                return true;
+            }
+            return false;
+        };
         
-        const newDecimals = { chad: 18, mon: 18 }; // Assume MON is 18 if not available
-        if (chadDecimalsResult.status === 'fulfilled') newDecimals.chad = Number(chadDecimalsResult.value);
+        logAndFlagError('CHAD decimals', chadDecimalsResult);
+        logAndFlagError('CHAD balance', chadBalanceResult);
+        logAndFlagError('Native MON balance', nativeMonBalanceResult);
+        logAndFlagError('Daily Limit', dailyLimitResult);
+        logAndFlagError('Daily Used', dailyUsedResult);
+        
+        const newDecimals = { chad: 18, mon: 18 };
+        if (chadDecimalsResult.status === 'fulfilled') {
+            newDecimals.chad = Number(chadDecimalsResult.value);
+        } else {
+            console.warn("Could not fetch CHAD decimals, defaulting to 18.");
+        }
         setTokenDecimals(newDecimals);
 
         const newBalances: Balances = { chad: 0, mon: 0 };
@@ -115,9 +139,13 @@ const useWeb3 = () => {
         if (dailyUsedResult.status === 'fulfilled') newDailyLimit.used = formatBalance(dailyUsedResult.value, newDecimals.chad);
         setDailyLimit(newDailyLimit);
 
+        if (fetchError) {
+            setError("Some account data could not be loaded. Balances may be incorrect. Check console for details.");
+        }
+
     } catch (e: any) {
-        console.error("Error fetching account data:", e);
-        setError("Could not fetch account data.");
+        console.error("Error during account data fetch process:", e);
+        setError("An error occurred while fetching account data.");
     } finally {
         setLoading(false);
     }
@@ -139,8 +167,33 @@ const useWeb3 = () => {
         
         if (connectedChainId !== Number(MONAD_TESTNET_CHAIN_ID)) {
           setError("Wrong network. Please switch to Monad Testnet in your wallet.");
-          return;
+          try {
+            await primaryWallet.provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: MONAD_TESTNET_HEX_CHAIN_ID }],
+            });
+            // On successful switch, this effect will re-run and the error will be cleared.
+          } catch (switchError: any) {
+            // This error code indicates that the chain has not been added to MetaMask.
+            if (switchError.code === 4902) {
+              try {
+                await primaryWallet.provider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [MONAD_TESTNET_CONFIG],
+                });
+              } catch (addError) {
+                 setError("Failed to add Monad Testnet. Please add it manually.");
+                 console.error("Failed to add Monad Testnet", addError);
+              }
+            } else {
+              setError("Failed to switch network. Please do it manually in your wallet.");
+              console.error("Failed to switch network", switchError);
+            }
+          }
+          return; // Stop further execution until network is correct
         }
+
+        setError(null); // Clear any network error if we are on the correct chain
 
         const provider = new ethers.BrowserProvider(primaryWallet.provider, 'any');
         const currentSigner = await provider.getSigner();
