@@ -74,21 +74,29 @@ const WaitingView: React.FC<WaitingViewProps> = ({ bet, onResolution, currentPri
     <div className="flex justify-center py-10">
       <div className="w-full max-w-4xl bg-brand-gray p-4 sm:p-8 rounded-xl border border-brand-light-gray animate-fade-in">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 text-center mb-8">
-          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg">
+          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg flex flex-col">
             <p className="text-sm text-brand-text">Countdown</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{formatCountdown(countdown)}</p>
+            <div className="flex-grow flex items-center justify-center">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{formatCountdown(countdown)}</p>
+            </div>
           </div>
-          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg">
+          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg flex flex-col">
             <p className="text-sm text-brand-text">Bet Size</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{bet.amount} CHAD</p>
+            <div className="flex-grow flex items-center justify-center">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{bet.amount} CHAD</p>
+            </div>
           </div>
-          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg">
+          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg flex flex-col">
             <p className="text-sm text-brand-text">Bet Entry Price</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">${bet.entryPrice.toFixed(4)}</p>
+            <div className="flex-grow flex items-center justify-center">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">${bet.entryPrice.toFixed(4)}</p>
+            </div>
           </div>
-          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg">
+          <div className="bg-brand-dark p-3 sm:p-4 rounded-lg flex flex-col">
             <p className="text-sm text-brand-text">Current BTC Price</p>
-            <p className={`text-lg sm:text-xl md:text-2xl font-bold ${isPriceUp ? 'text-brand-green' : 'text-brand-red'} break-words`}>${currentPrice.toFixed(4)}</p>
+            <div className="flex-grow flex items-center justify-center">
+              <p className={`text-lg sm:text-xl md:text-2xl font-bold ${isPriceUp ? 'text-brand-green' : 'text-brand-red'} break-words`}>${currentPrice.toFixed(4)}</p>
+            </div>
           </div>
         </div>
 

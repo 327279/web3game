@@ -44,13 +44,13 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect, onOpe
         )}
         {address ? (
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-            <span className="text-xs sm:text-sm font-mono bg-brand-dark px-2 py-1 rounded-md border border-brand-light-gray">{displayAddress}</span>
+            <span className="text-sm font-mono bg-brand-dark px-3 py-2 rounded-lg border border-brand-light-gray">{displayAddress}</span>
             <button
                 onClick={() => {
                   playSound('click');
                   onDisconnect();
                 }}
-                className="bg-brand-red text-white font-bold py-2 px-2 sm:px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 text-xs sm:text-sm transform hover:scale-105 flex-shrink-0"
+                className="bg-brand-red text-white font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 text-sm transform hover:scale-105 flex-shrink-0"
             >
                 Disconnect
             </button>
@@ -61,7 +61,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect, onOpe
               playSound('click');
               onConnect();
             }}
-            className="bg-brand-green text-black font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105 text-sm sm:text-base"
+            className="bg-brand-green text-black font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105 text-sm"
           >
             Connect Wallet
           </button>
