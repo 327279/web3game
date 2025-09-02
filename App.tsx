@@ -7,6 +7,7 @@ import useWeb3 from './hooks/useWeb3';
 import usePriceFeed from './hooks/usePriceFeed';
 import useMarketData from './hooks/useMarketData';
 import usePlayerStats from './hooks/usePlayerStats';
+import useLiveBets from './hooks/useLiveBets';
 import Header from './components/Header';
 import BettingView from './components/BettingView';
 import WaitingView from './components/WaitingView';
@@ -76,12 +77,15 @@ function MainApp() {
     refreshData,
     bettingStep,
     setBettingStep,
+    chadFlipContract,
+    tokenDecimals,
   } = useWeb3();
   
   const { stats, updateOnWin, updateOnLoss, getAchievements } = usePlayerStats();
 
   const { priceHistory, currentPrice } = usePriceFeed(108540.00);
   const marketData = useMarketData();
+  const liveBets = useLiveBets(chadFlipContract, tokenDecimals.chad);
 
   useEffect(() => {
     preloadSounds();
@@ -149,7 +153,7 @@ function MainApp() {
             setBettingStep={setBettingStep}
             onRefresh={refreshData}
             playerStats={stats}
-            address={address}
+            liveBets={liveBets}
           />
         );
     }

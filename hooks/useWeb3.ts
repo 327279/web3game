@@ -139,166 +139,174 @@ const useWeb3 = () => {
         
         if (connectedChainId !== Number(MONAD_TESTNET_CHAIN_ID)) {
           setError("Wrong network. Please switch to Monad Testnet in your wallet.");
-          setSigner(null);
           return;
         }
 
-        setError(null);
-        const ethersProvider = new ethers.BrowserProvider(primaryWallet.provider, 'any');
-        const currentSigner = await ethersProvider.getSigner();
+        const provider = new ethers.BrowserProvider(primaryWallet.provider, 'any');
+        const currentSigner = await provider.getSigner();
         setSigner(currentSigner);
 
         const chadFlip = new ethers.Contract(CHADFLIP_CONTRACT_ADDRESS, chadFlipContractABI, currentSigner);
-        const chad = new ethers.Contract(CHAD_TOKEN_ADDRESS, erc20ABI, currentSigner);
-        const mon = new ethers.Contract(MON_TOKEN_ADDRESS, erc20ABI, currentSigner);
-        
         setChadFlipContract(chadFlip);
-        setChadTokenContract(chad);
-        setMonTokenContract(mon);
-        
-        await fetchContractData(currentSigner, chadFlip, chad);
+
+        const chadToken = new ethers.Contract(CHAD_TOKEN_ADDRESS, erc20ABI, currentSigner);
+        setChadTokenContract(chadToken);
+
+        if (MON_TOKEN_ADDRESS && MON_TOKEN_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+            const monToken = new ethers.Contract(MON_TOKEN_ADDRESS, erc20ABI, currentSigner);
+            setMonTokenContract(monToken);
+        } else {
+            console.warn("MON_TOKEN_ADDRESS is not configured. Leveraged bets will fail.");
+            setMonTokenContract(null);
+        }
+
+        await fetchContractData(currentSigner, chadFlip, chadToken);
       } else {
-        setError(null);
         setSigner(null);
-        setBalances({chad: 0, mon: 0});
-        setDailyLimit({used: 0, limit: 5000});
+        setChadFlipContract(null);
+        setChadTokenContract(null);
+        setMonTokenContract(null);
+        setBalances({ chad: 0, mon: 0 });
+        setDailyLimit({ used: 0, limit: 5000 });
+        setError(null);
       }
     };
     setup();
   }, [primaryWallet, fetchContractData]);
   
-  const openModal = useCallback(() => { connect(); }, [connect]);
-  const doDisconnect = useCallback(() => { if (wallet) { disconnect(wallet); } }, [wallet, disconnect]);
-  
-  const placeBet = async (bet: Omit<Bet, 'contractBetId'>): Promise<bigint | null> => {
-    if (!chadFlipContract || !chadTokenContract || !monTokenContract || !signer) {
-      setError("Please connect your wallet first.");
-      setBettingStep('error');
-      return null;
+  const placeBet = useCallback(async (bet: Omit<Bet, 'id' | 'contractBetId'>): Promise<bigint | null> => {
+    if (!signer || !chadFlipContract || !chadTokenContract || !address) {
+        setError("Wallet not connected or contract not initialized.");
+        setBettingStep('error');
+        return null;
     }
-    setError(null);
     setLoading(true);
-
+    setError(null);
     try {
-      const userAddress = await signer.getAddress();
-      const amount = ethers.parseUnits(bet.amount.toString(), tokenDecimals.chad);
-      
-      const currentChadAllowance = await chadTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
-      if (currentChadAllowance < amount) {
-        setBettingStep('approving_chad');
-        const approveTx = await chadTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, amount);
-        const approveReceipt = await approveTx.wait();
-        if (!approveReceipt || approveReceipt.status === 0) throw new Error("CHAD approval transaction failed.");
-      }
+        const amountWei = ethers.parseUnits(bet.amount.toString(), tokenDecimals.chad);
+        const entryPriceBigInt = BigInt(Math.round(bet.entryPrice * PRICE_PRECISION));
 
-      if (bet.leverage > 1) {
-          if (MON_TOKEN_ADDRESS === ethers.ZeroAddress) {
-              throw new Error("Leverage Error: The MON Token Address is not configured in `constants.ts`.");
-          }
-          const collateralNeeded = ethers.parseUnits((bet.amount * (bet.leverage - 1)).toString(), tokenDecimals.mon);
-          
-          const erc20MonBalance = await monTokenContract.balanceOf(userAddress);
-          if (erc20MonBalance < collateralNeeded) {
-              const needed = ethers.formatUnits(collateralNeeded, tokenDecimals.mon);
-              throw new Error(`Insufficient MON collateral. You need ${needed} but have ${ethers.formatUnits(erc20MonBalance, tokenDecimals.mon)}.`);
-          }
-
-          const currentMonAllowance = await monTokenContract.allowance(userAddress, CHADFLIP_CONTRACT_ADDRESS);
-          if (currentMonAllowance < collateralNeeded) {
+        if (bet.leverage > 1) {
+            if (!monTokenContract) {
+                throw new Error("MON token address not configured. Leveraged bets are disabled.");
+            }
+            const collateralRequired = BigInt(bet.amount) * BigInt(bet.leverage - 1);
+            const collateralWei = ethers.parseUnits(collateralRequired.toString(), tokenDecimals.mon);
+            
             setBettingStep('approving_mon');
-            const approveMonTx = await monTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, collateralNeeded);
-            const approveMonReceipt = await approveMonTx.wait();
-            if (!approveMonReceipt || approveMonReceipt.status === 0) throw new Error("MON collateral approval transaction failed.");
-          }
-      }
-      
-      setBettingStep('placing_bet');
-      const predictionUp = bet.direction === 'UP';
-      const entryPriceScaled = BigInt(Math.round(bet.entryPrice * PRICE_PRECISION));
+            const monAllowance = await monTokenContract.allowance(address, CHADFLIP_CONTRACT_ADDRESS);
+            if (monAllowance < collateralWei) {
+                const approveMonTx = await monTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, ethers.MaxUint256);
+                await approveMonTx.wait();
+            }
+        }
+        
+        setBettingStep('approving_chad');
+        const chadAllowance = await chadTokenContract.allowance(address, CHADFLIP_CONTRACT_ADDRESS);
+        if (chadAllowance < amountWei) {
+            const approveChadTx = await chadTokenContract.approve(CHADFLIP_CONTRACT_ADDRESS, ethers.MaxUint256);
+            await approveChadTx.wait();
+        }
 
-      const tx = await chadFlipContract.placeBet(amount, bet.leverage, predictionUp, bet.duration, entryPriceScaled);
-      const receipt = await tx.wait();
-      
-      if (!receipt || receipt.status === 0) {
-          throw new Error("Transaction failed on-chain. The contract reverted it.");
-      }
+        setBettingStep('placing_bet');
+        const tx = await chadFlipContract.placeBet(
+            amountWei,
+            bet.leverage,
+            bet.direction === 'UP',
+            bet.duration,
+            entryPriceBigInt
+        );
 
-      const betPlacedTopic = chadFlipContract.interface.getEvent("BetPlaced").topicHash;
-      const eventLog = receipt.logs.find(log => log.topics[0] === betPlacedTopic && log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase());
+        const receipt = await tx.wait();
 
-      if (eventLog) {
-          const parsedLog = chadFlipContract.interface.parseLog({ topics: eventLog.topics as string[], data: eventLog.data });
-          const contractBetId = parsedLog.args.betId;
-          setBettingStep('success');
-          refreshData();
-          return contractBetId;
-      }
+        let betIdFromEvent: bigint | null = null;
+        for (const log of receipt.logs) {
+            try {
+                const iface = chadFlipContract.interface;
+                const parsedLog = iface.parseLog(log);
+                if (parsedLog && parsedLog.name === 'BetPlaced') {
+                    betIdFromEvent = parsedLog.args.betId;
+                    break;
+                }
+            } catch (e) { /* Not a ChadFlip event, ignore */ }
+        }
 
-      throw new Error('Could not find BetPlaced event in transaction receipt.');
-
+        if (betIdFromEvent === null) {
+            throw new Error("Could not find BetPlaced event in transaction receipt.");
+        }
+        
+        setBettingStep('success');
+        refreshData();
+        return betIdFromEvent;
     } catch (e: any) {
-      refreshData();
-      setError(parseBlockchainError(e));
-      setBettingStep('error');
-      return null;
+        setError(parseBlockchainError(e));
+        setBettingStep('error');
+        return null;
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
-  
-  const resolveBet = async (bet: Bet, finalPrice: number): Promise<BetResult | null> => {
-      if (!chadFlipContract || typeof bet.contractBetId === 'undefined') {
-          setError("Cannot resolve bet: contract not ready or bet ID is missing.");
+  }, [signer, address, chadFlipContract, chadTokenContract, monTokenContract, tokenDecimals, refreshData]);
+
+  const resolveBet = useCallback(async (bet: Bet, finalPrice: number): Promise<BetResult | null> => {
+      if (!signer || !chadFlipContract || !bet.contractBetId) {
+          setError("Cannot resolve: Missing contract or bet ID.");
           return null;
       }
       setLoading(true);
       setError(null);
       try {
-          const finalPriceScaled = BigInt(Math.round(finalPrice * PRICE_PRECISION));
-          const tx = await chadFlipContract.resolveBet(bet.contractBetId, finalPriceScaled);
+          const finalPriceBigInt = BigInt(Math.round(finalPrice * PRICE_PRECISION));
+          const tx = await chadFlipContract.resolveBet(bet.contractBetId, finalPriceBigInt);
           const receipt = await tx.wait();
-          
-          if (!receipt || receipt.status === 0) {
-            throw new Error("Bet resolution transaction failed. The contract reverted it.");
-          }
 
-          const betResolvedTopic = chadFlipContract.interface.getEvent("BetResolved").topicHash;
-          const eventLog = receipt.logs.find(log => log.topics[0] === betResolvedTopic && log.address.toLowerCase() === CHADFLIP_CONTRACT_ADDRESS.toLowerCase());
-
-          if (eventLog) {
-              const parsedLog = chadFlipContract.interface.parseLog({ topics: eventLog.topics as string[], data: eventLog.data });
-              const { won, payoutAmount } = parsedLog.args;
-              return {
-                  won: won,
-                  payout: formatBalance(payoutAmount, tokenDecimals.chad),
-                  betAmount: bet.amount,
-                  leverage: bet.leverage
-              };
+          let betResultFromEvent: { won: boolean; payout: bigint } | null = null;
+          for (const log of receipt.logs) {
+            try {
+                const iface = chadFlipContract.interface;
+                const parsedLog = iface.parseLog(log);
+                if (parsedLog && parsedLog.name === 'BetResolved' && parsedLog.args.betId === bet.contractBetId) {
+                    betResultFromEvent = {
+                        won: parsedLog.args.won,
+                        payout: parsedLog.args.payoutAmount,
+                    };
+                    break;
+                }
+            } catch (e) { /* Not a ChadFlip event, ignore */ }
           }
           
-          throw new Error("Could not confirm bet result from the blockchain.");
+          if (!betResultFromEvent) {
+              throw new Error("Could not find BetResolved event for this bet.");
+          }
 
+          return {
+              won: betResultFromEvent.won,
+              payout: parseFloat(ethers.formatUnits(betResultFromEvent.payout, tokenDecimals.chad)),
+              betAmount: bet.amount,
+              leverage: bet.leverage,
+          };
       } catch (e: any) {
           setError(parseBlockchainError(e));
           return null;
       } finally {
           setLoading(false);
       }
-  };
+  }, [signer, chadFlipContract, tokenDecimals.chad]);
 
-  return { 
-    openModal,
-    disconnect: doDisconnect, 
-    address, 
-    balances, 
-    dailyLimit, 
-    placeBet, 
+  return {
+    openModal: () => connect(),
+    disconnect: () => primaryWallet && disconnect(primaryWallet),
+    address,
+    balances,
+    dailyLimit,
+    placeBet,
     resolveBet,
-    loading: connecting || loading, 
-    error, 
-    refreshData, 
-    bettingStep, 
+    loading,
+    error,
+    refreshData,
+    bettingStep,
     setBettingStep,
+    chadFlipContract,
+    tokenDecimals,
   };
 };
 

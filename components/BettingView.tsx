@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Balances, DailyLimit, BetDirection, BettingStep, MarketData, Bet, PlayerStats } from '../types';
+import { Balances, DailyLimit, BetDirection, BettingStep, MarketData, Bet, PlayerStats, LiveBet } from '../types';
 import PriceChart from './PriceChart';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -12,7 +12,6 @@ import SpinnerIcon from './icons/SpinnerIcon';
 import ZoomOutIcon from './icons/ZoomOutIcon';
 import Leaderboard from './Leaderboard';
 import LiveActivityFeed from './LiveActivityFeed';
-import { useLeaderboardData, useLiveFeedData } from '../hooks/useMockData';
 import WinStreakIndicator from './WinStreakIndicator';
 
 interface BettingViewProps {
@@ -29,10 +28,10 @@ interface BettingViewProps {
   setBettingStep: (step: BettingStep) => void;
   onRefresh: () => void;
   playerStats: PlayerStats;
-  address: string | null | undefined;
+  liveBets: LiveBet[];
 }
 
-const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh, playerStats, address }) => {
+const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh, playerStats, liveBets }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [duration, setDuration] = useState<number>(60);
@@ -43,9 +42,6 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [zoomedData, setZoomedData] = useState(priceHistory);
   const [isZoomed, setIsZoomed] = useState(false);
   const [brushKey, setBrushKey] = useState(0);
-
-  const leaderboardData = useLeaderboardData(address);
-  const liveBets = useLiveFeedData();
 
   useEffect(() => {
     // When a new error comes from the hook, display it.
@@ -390,7 +386,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               </div>
           </div>
 
-          <Leaderboard data={leaderboardData} />
+          <Leaderboard />
 
           <LiveActivityFeed bets={liveBets} />
 
