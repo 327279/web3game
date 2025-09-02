@@ -39,12 +39,23 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, pri
       <div className="p-2 bg-brand-dark border border-brand-light-gray rounded-md shadow-lg text-sm">
         <p className="text-brand-text">{`Time: ${time}`}</p>
         <p className="font-bold text-white">{`Price: $${Number(price).toFixed(priceDecimalPlaces)}`}</p>
-        {pnl !== null && (
-            <div className={`font-bold mt-1 pt-1 border-t border-brand-light-gray ${pnl >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
-                {pnl > 0 && `${pnlPrefix} Win: +${pnl.toFixed(2)} CHAD`}
-                {pnl < 0 && `${pnlPrefix} Loss: ${pnl.toFixed(2)} CHAD`}
-                {pnl === 0 && `Break Even`}
+        {bet && (
+          <div className="mt-1 pt-1 border-t border-brand-light-gray space-y-1">
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-brand-text text-xs">Direction:</span>
+              <span className={`font-bold text-xs ${bet.direction === 'UP' ? 'text-brand-green' : 'text-brand-red'}`}>{bet.direction}</span>
             </div>
+            <div className="flex justify-between items-center gap-4">
+              <span className="text-brand-text text-xs">Entry:</span>
+              <span className="font-bold text-white text-xs">${bet.entryPrice.toFixed(priceDecimalPlaces)}</span>
+            </div>
+            {pnl !== null && (
+              <div className={`flex justify-between items-center gap-4 font-bold ${pnl >= 0 ? 'text-brand-green' : 'text-brand-red'}`}>
+                <span className="text-brand-text text-xs">{pnlPrefix} P&L:</span>
+                <span>{pnl >= 0 ? '+' : ''}{pnl.toFixed(2)} CHAD</span>
+              </div>
+            )}
+          </div>
         )}
       </div>
     );

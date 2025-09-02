@@ -3,6 +3,8 @@ const soundUrls = {
   placeBet: 'https://cdn.pixabay.com/audio/2022/03/10/audio_a890291931.mp3',
   win: 'https://cdn.pixabay.com/audio/2022/03/23/audio_73ed8c1137.mp3',
   lose: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c632821540.mp3',
+  achievement: 'https://cdn.pixabay.com/audio/2022/09/20/audio_550ae89932.mp3',
+  streak: 'https://cdn.pixabay.com/audio/2022/01/18/audio_8217316c02.mp3',
 };
 
 type SoundType = keyof typeof soundUrls;

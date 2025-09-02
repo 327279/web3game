@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Balances, DailyLimit, BetDirection, BettingStep, MarketData, Bet } from '../types';
+import { Balances, DailyLimit, BetDirection, BettingStep, MarketData, Bet, PlayerStats } from '../types';
 import PriceChart from './PriceChart';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -10,6 +10,10 @@ import ConfirmationModal from './ConfirmationModal';
 import SparklineChart from './SparklineChart';
 import SpinnerIcon from './icons/SpinnerIcon';
 import ZoomOutIcon from './icons/ZoomOutIcon';
+import Leaderboard from './Leaderboard';
+import LiveActivityFeed from './LiveActivityFeed';
+import { useLeaderboardData, useLiveFeedData } from '../hooks/useMockData';
+import WinStreakIndicator from './WinStreakIndicator';
 
 interface BettingViewProps {
   priceHistory: { time: string; price: number }[];
@@ -24,9 +28,11 @@ interface BettingViewProps {
   bettingStep: BettingStep;
   setBettingStep: (step: BettingStep) => void;
   onRefresh: () => void;
+  playerStats: PlayerStats;
+  address: string | null | undefined;
 }
 
-const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh }) => {
+const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh, playerStats, address }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [duration, setDuration] = useState<number>(60);
@@ -37,6 +43,9 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [zoomedData, setZoomedData] = useState(priceHistory);
   const [isZoomed, setIsZoomed] = useState(false);
   const [brushKey, setBrushKey] = useState(0);
+
+  const leaderboardData = useLeaderboardData(address);
+  const liveBets = useLiveFeedData();
 
   useEffect(() => {
     // When a new error comes from the hook, display it.
@@ -201,29 +210,10 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between">
-            <div>
-              <p className="text-sm text-brand-text">MARKET OVERVIEW (BTC)</p>
-              <div className="flex justify-between items-center mt-2">
-                <div>
-                  <p 
-                    className={`text-3xl md:text-4xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
-                  >
-                    {isPriceChangePositive ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
-                  </p>
-                  <p className="text-xs text-brand-text">24h Change</p>
-                </div>
-                <SparklineChart data={marketData.priceHistory24h} isPositive={isPriceChangePositive} />
-              </div>
-            </div>
-            <div className="mt-4">
-              <p className="text-xs text-brand-text">24h Volume</p>
-              <p className="text-2xl md:text-3xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Main Content Column */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* Price Chart Card */}
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
             <div className="flex justify-between items-center mb-2">
                 <div>
@@ -250,135 +240,160 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               draftBet={draftBet}
             />
           </div>
+
+          {/* Betting Controls Card */}
+          <div className="bg-brand-gray p-4 sm:p-6 lg:p-8 rounded-xl border border-brand-light-gray flex flex-col items-center">
+            <h2 className="text-2xl md:text-3xl font-black text-brand-green tracking-widest mb-6" style={{textShadow: '0 0 8px #a8ff00'}}>PLACE YOUR BET</h2>
+
+            <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+                <button 
+                    onClick={() => handleDirectionChange('UP')}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'UP' ? 'bg-brand-green text-black shadow-green-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
+                >
+                    {loading && submittedDirection === 'UP' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowUpIcon className="w-6 h-6" />} UP
+                </button>
+                <button 
+                    onClick={() => handleDirectionChange('DOWN')}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'DOWN' ? 'bg-brand-red text-white shadow-red-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
+                >
+                    {loading && submittedDirection === 'DOWN' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowDownIcon className="w-6 h-6" />} DOWN
+                </button>
+            </div>
+
+            <div className="w-full max-w-md mt-8">
+                <Tooltip text="Leverage multiplies your potential profit but also the collateral required (MON tokens) for bets over 1x.">
+                  <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">LEVERAGE</p>
+                </Tooltip>
+                <div className="grid grid-cols-4 gap-2">
+                    {[1, 2, 5, 10].map(val => (
+                        <button key={val} onClick={() => handleLeverageChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
+                            {val}x
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="w-full max-w-md mt-6">
+                <Tooltip text="The duration of the bet round. The outcome is determined at the end of this countdown.">
+                  <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">DURATION</p>
+                </Tooltip>
+                <div className="grid grid-cols-4 gap-2">
+                    {[15, 30, 45, 60].map(val => (
+                        <button key={val} onClick={() => handleDurationChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${duration === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
+                            {val}s
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="w-full max-w-md mt-6">
+                <Tooltip text="Quickly set your bet amount based on a percentage of your available CHAD balance.">
+                    <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">QUICK AMOUNT</p>
+                </Tooltip>
+                <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setAmountByPercentage(25)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">25%</button>
+                    <button onClick={() => setAmountByPercentage(50)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">50%</button>
+                    <button onClick={() => setAmountByPercentage(100)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">MAX</button>
+                </div>
+            </div>
+
+            <div className="w-full max-w-md mt-6">
+                <p className="text-sm font-semibold text-brand-text mb-2">Bet Amount (in CHAD)</p>
+                <input 
+                    type="number"
+                    value={betAmount}
+                    onChange={handleAmountChange}
+                    disabled={loading}
+                    className="w-full p-4 bg-brand-dark border-2 border-brand-light-gray rounded-lg text-white text-xl font-bold text-center focus:border-brand-green outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="10"
+                />
+            </div>
+
+            <button 
+                onClick={initiatePlaceBet}
+                disabled={isButtonDisabled}
+                className="w-full max-w-md mt-6 p-4 rounded-lg bg-brand-green text-black text-2xl font-black tracking-wider transition-all duration-200 disabled:bg-brand-light-gray disabled:text-gray-500 disabled:cursor-not-allowed enabled:hover:scale-105 enabled:shadow-green-glow"
+            >
+                {loading ? 'Processing...' : 'PLACE BET'}
+            </button>
+            
+            <div className="w-full max-w-md mt-6 text-center min-h-[4.5rem] flex flex-col justify-center">
+              {displayError ? (
+                  <div className="p-3 bg-red-900/50 border border-brand-red rounded-lg animate-fade-in">
+                      <p className="text-brand-red text-sm font-semibold">{displayError}</p>
+                  </div>
+              ) : !isWalletConnected ? (
+                  <p className="text-yellow-400">Please connect your wallet to place a bet.</p>
+              ) : (
+                  <>
+                      <p className="text-brand-text">Potential Win: <span className="text-brand-green font-bold">{potentialWin.toFixed(2)} CHAD</span></p>
+                      {collateralRequired > 0 && <p className="text-xs text-brand-purple">({collateralRequired.toFixed(2)} MON collateral required)</p>}
+                  </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Sidebar Column */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Market Overview Card */}
+          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray flex flex-col justify-between">
+            <div>
+              <p className="text-sm text-brand-text">MARKET OVERVIEW (BTC)</p>
+              <div className="flex justify-between items-center mt-2">
+                <div>
+                  <p 
+                    className={`text-3xl md:text-4xl font-bold ${isPriceChangePositive ? 'text-brand-green' : 'text-brand-red'}`}
+                  >
+                    {isPriceChangePositive ? '+' : ''}{marketData.priceChange24h.toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-brand-text">24h Change</p>
+                </div>
+                <SparklineChart data={marketData.priceHistory24h} isPositive={isPriceChangePositive} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-xs text-brand-text">24h Volume</p>
+              <p className="text-2xl md:text-3xl font-bold text-white">{formatVolume(marketData.volume24h)}</p>
+            </div>
+          </div>
+
+          {/* Player Hub Card */}
           <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
-             <p className="text-sm text-brand-text mb-4">YOUR ASSETS</p>
-             <div className="flex justify-center gap-12 sm:justify-around">
+             <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-brand-text">PLAYER HUB</p>
+                <WinStreakIndicator streak={playerStats.winStreak} />
+             </div>
+             
+             <div className="flex justify-center gap-12 sm:justify-around mb-6">
                  <div className="text-center">
-                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-                         <svg className="w-full h-full" viewBox="0 0 36 36">
-                             <path className="text-brand-light-gray" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                             <path className="text-brand-green" stroke="currentColor" strokeWidth="3" fill="none" strokeDasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-                         </svg>
-                         <span className="absolute text-white font-bold text-base sm:text-lg">{balances.chad.toFixed(2)}</span>
-                     </div>
-                     <p className="mt-2 text-white font-semibold">CHAD</p>
+                     <p className="text-white font-bold text-lg sm:text-xl">{balances.chad.toFixed(2)}</p>
+                     <p className="mt-1 text-sm font-semibold text-brand-green">CHAD</p>
                  </div>
-                 <div className="text-center text-brand-purple">
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-                          <div className="w-full h-full rounded-full border-2 border-dashed border-brand-purple flex items-center justify-center">
-                             <span className="text-white font-bold text-base sm:text-lg">{balances.mon.toFixed(2)}</span>
-                          </div>
-                     </div>
-                     <p className="mt-2 font-semibold">MON</p>
+                 <div className="text-center">
+                     <p className="text-white font-bold text-lg sm:text-xl">{balances.mon.toFixed(2)}</p>
+                     <p className="mt-1 text-sm font-semibold text-brand-purple">MON</p>
                  </div>
              </div>
-          </div>
-          <div className="bg-brand-gray p-4 sm:p-6 rounded-xl border border-brand-light-gray">
+
               <Tooltip text="This is the maximum amount of CHAD you can bet in a 24-hour period. It resets daily.">
-                  <div className="flex justify-between items-center cursor-help">
+                  <div className="flex justify-between items-center cursor-help mb-2">
                       <p className="text-sm text-brand-text">Daily Bet Limit</p>
                       <button className="text-brand-text hover:text-white transition transform hover:scale-110" onClick={handleRefreshData}><RefreshIcon className="w-4 h-4" /></button>
                   </div>
               </Tooltip>
-              <p className="text-xl md:text-2xl font-bold text-white mt-2">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
+              <p className="text-lg md:text-xl font-bold text-white">{dailyLimit.used.toFixed(2)} / {dailyLimit.limit.toFixed(0)} CHAD</p>
               <div className="w-full bg-brand-light-gray rounded-full h-2.5 mt-2">
                   <div className="bg-brand-green h-2.5 rounded-full" style={{ width: `${(dailyLimit.used / dailyLimit.limit) * 100}%` }}></div>
               </div>
           </div>
-        </div>
-        
-        {/* Right Column */}
-        <div className="lg:col-span-2 bg-brand-gray p-4 sm:p-6 lg:p-8 rounded-xl border border-brand-light-gray flex flex-col items-center">
-          <h2 className="text-2xl md:text-3xl font-black text-brand-green tracking-widest mb-6" style={{textShadow: '0 0 8px #a8ff00'}}>PLACE YOUR BET</h2>
 
-          <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-              <button 
-                  onClick={() => handleDirectionChange('UP')}
-                  disabled={loading}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'UP' ? 'bg-brand-green text-black shadow-green-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
-              >
-                  {loading && submittedDirection === 'UP' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowUpIcon className="w-6 h-6" />} UP
-              </button>
-              <button 
-                  onClick={() => handleDirectionChange('DOWN')}
-                  disabled={loading}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-lg font-bold text-2xl transition-all duration-200 transform hover:scale-105 ${direction === 'DOWN' ? 'bg-brand-red text-white shadow-red-glow' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}
-              >
-                  {loading && submittedDirection === 'DOWN' ? <SpinnerIcon className="animate-spin w-6 h-6" /> : <ArrowDownIcon className="w-6 h-6" />} DOWN
-              </button>
-          </div>
+          <Leaderboard data={leaderboardData} />
 
-          <div className="w-full max-w-md mt-8">
-              <Tooltip text="Leverage multiplies your potential profit but also the collateral required (MON tokens) for bets over 1x.">
-                <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">LEVERAGE</p>
-              </Tooltip>
-              <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 5, 10].map(val => (
-                      <button key={val} onClick={() => handleLeverageChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${leverage === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
-                          {val}x
-                      </button>
-                  ))}
-              </div>
-          </div>
+          <LiveActivityFeed bets={liveBets} />
 
-          <div className="w-full max-w-md mt-6">
-              <Tooltip text="The duration of the bet round. The outcome is determined at the end of this countdown.">
-                <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">DURATION</p>
-              </Tooltip>
-              <div className="grid grid-cols-4 gap-2">
-                  {[15, 30, 45, 60].map(val => (
-                      <button key={val} onClick={() => handleDurationChange(val)} disabled={loading} className={`p-3 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 ${duration === val ? 'bg-brand-green text-black' : 'bg-brand-light-gray text-white hover:bg-opacity-70'} disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100`}>
-                          {val}s
-                      </button>
-                  ))}
-              </div>
-          </div>
-          
-          <div className="w-full max-w-md mt-6">
-              <Tooltip text="Quickly set your bet amount based on a percentage of your available CHAD balance.">
-                  <p className="text-sm font-semibold text-brand-text mb-2 cursor-help">QUICK AMOUNT</p>
-              </Tooltip>
-              <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setAmountByPercentage(25)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">25%</button>
-                  <button onClick={() => setAmountByPercentage(50)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">50%</button>
-                  <button onClick={() => setAmountByPercentage(100)} disabled={loading} className="p-3 rounded-lg font-bold bg-brand-light-gray text-white hover:bg-opacity-70 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">MAX</button>
-              </div>
-          </div>
-
-          <div className="w-full max-w-md mt-6">
-              <p className="text-sm font-semibold text-brand-text mb-2">Bet Amount (in CHAD)</p>
-              <input 
-                  type="number"
-                  value={betAmount}
-                  onChange={handleAmountChange}
-                  disabled={loading}
-                  className="w-full p-4 bg-brand-dark border-2 border-brand-light-gray rounded-lg text-white text-xl font-bold text-center focus:border-brand-green outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="10"
-              />
-          </div>
-
-          <button 
-              onClick={initiatePlaceBet}
-              disabled={isButtonDisabled}
-              className="w-full max-w-md mt-6 p-4 rounded-lg bg-brand-green text-black text-2xl font-black tracking-wider transition-all duration-200 disabled:bg-brand-light-gray disabled:text-gray-500 disabled:cursor-not-allowed enabled:hover:scale-105 enabled:shadow-green-glow"
-          >
-              {loading ? 'Processing...' : 'PLACE BET'}
-          </button>
-          
-          <div className="w-full max-w-md mt-6 text-center min-h-[4.5rem] flex flex-col justify-center">
-            {displayError ? (
-                <div className="p-3 bg-red-900/50 border border-brand-red rounded-lg animate-fade-in">
-                    <p className="text-brand-red text-sm font-semibold">{displayError}</p>
-                </div>
-            ) : !isWalletConnected ? (
-                <p className="text-yellow-400">Please connect your wallet to place a bet.</p>
-            ) : (
-                <>
-                    <p className="text-brand-text">Potential Win: <span className="text-brand-green font-bold">{potentialWin.toFixed(2)} CHAD</span></p>
-                    {collateralRequired > 0 && <p className="text-xs text-brand-purple">({collateralRequired.toFixed(2)} MON collateral required)</p>}
-                </>
-            )}
-          </div>
         </div>
       </div>
       {betToConfirm && (

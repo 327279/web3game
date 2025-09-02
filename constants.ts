@@ -38,6 +38,19 @@ export const MONAD_TESTNET_CONFIG = {
     blockExplorerUrls: ['https://testnet.monadexplorer.com'],
 };
 
+// --- Achievements ---
+export const ACHIEVEMENTS_LIST = [
+  { id: 'first_win', name: 'First Blood', description: 'Win your first bet', goal: 1, metric: 'totalWins' },
+  { id: 'high_roller', name: 'High Roller', description: 'Place a single bet over 1000 CHAD', goal: 1000, metric: 'singleBetAmount' },
+  { id: 'chad_apprentice', name: 'Chad Apprentice', description: 'Win 10 bets', goal: 10, metric: 'totalWins' },
+  { id: 'chad_master', name: 'Chad Master', description: 'Win 50 bets', goal: 50, metric: 'totalWins' },
+  { id: 'on_fire', name: 'On Fire!', description: 'Achieve a 3-win streak', goal: 3, metric: 'winStreak' },
+  { id: 'unstoppable', name: 'Unstoppable', description: 'Achieve a 7-win streak', goal: 7, metric: 'winStreak' },
+  { id: 'leverage_god', name: 'Leverage God', description: 'Win a 10x leverage bet', goal: 10, metric: 'highestLeverageWin' },
+  { id: 'volume_trader', name: 'Volume Trader', description: 'Bet a total volume of 10,000 CHAD', goal: 10000, metric: 'totalVolume' },
+] as const;
+
+
 // This is the ABI for the NEW, ROBUST `ChadFlip.sol` contract.
 export const chadFlipContractABI = [
 	{

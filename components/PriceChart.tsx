@@ -1,5 +1,5 @@
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Brush } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Brush, ReferenceArea } from 'recharts';
 import CurrentPriceLabel from './CurrentPriceLabel';
 import ChartTooltip from './ChartTooltip';
 import { Bet } from '../types';
@@ -14,6 +14,14 @@ interface PriceChartProps {
 }
 
 const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, onZoom, brushKey, draftBet }) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     if (!data || data.length === 0) {
         return <div className="h-56 sm:h-64 w-full flex items-center justify-center text-brand-text">Loading chart data...</div>;
     }
@@ -41,7 +49,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, o
                             axisLine={false} 
                             interval="preserveStartEnd"
                             tickFormatter={(value, index) => {
-                                const tickCount = Math.floor(data.length / 5) || 1;
+                                // Show fewer ticks on mobile to avoid overlap
+                                const tickFrequency = isMobile ? Math.floor(data.length / 3) : Math.floor(data.length / 5);
+                                const tickCount = tickFrequency > 0 ? tickFrequency : 1;
                                 return index % tickCount === 0 ? value : '';
                             }}
                         />
@@ -52,13 +62,20 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, o
                             axisLine={false} 
                             domain={[minPrice - domainMargin, maxPrice + domainMargin]}
                             orientation="right"
-                            tickFormatter={(value) => `$${Number(value).toFixed(4)}`}
-                            width={80}
+                            tickFormatter={(value) => `$${Number(value).toFixed(isMobile ? 2 : 4)}`}
+                            width={isMobile ? 70 : 80}
                         />
                         <Tooltip
                             content={<ChartTooltip priceDecimalPlaces={4} bet={draftBet} isPreview={!!draftBet} />}
                             cursor={{ stroke: '#a8ff00', strokeWidth: 1, strokeDasharray: '3 3' }}
                         />
+                         {/* Highlight bet range */}
+                        {draftBet && draftBet.direction === 'UP' && (
+                            <ReferenceArea y1={draftBet.entryPrice} y2={maxPrice + domainMargin} fill="#a8ff00" fillOpacity={0.1} strokeWidth={0} ifOverflow="hidden" />
+                        )}
+                        {draftBet && draftBet.direction === 'DOWN' && (
+                            <ReferenceArea y1={minPrice - domainMargin} y2={draftBet.entryPrice} fill="#f84339" fillOpacity={0.1} strokeWidth={0} ifOverflow="hidden" />
+                        )}
                         <Area type="monotone" dataKey="price" stroke="#a8ff00" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" animationDuration={300} animationEasing="ease-out" />
                         <ReferenceLine 
                             y={currentPrice} 
@@ -67,6 +84,15 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, o
                             strokeDasharray="3 3"
                             label={<CurrentPriceLabel />}
                         />
+                        {/* Entry Price Line */}
+                        {draftBet && (
+                            <ReferenceLine
+                                y={draftBet.entryPrice}
+                                stroke={draftBet.direction === 'UP' ? '#a8ff00' : '#f84339'}
+                                strokeWidth={1.5}
+                                strokeDasharray="4 4"
+                            />
+                        )}
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -83,7 +109,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, o
                             height={40} 
                             y={0} 
                             onChange={onZoom}
-                            travellerWidth={10}
+                            travellerWidth={isMobile ? 20 : 10}
                         />
                     </AreaChart>
                 </ResponsiveContainer>

@@ -6,10 +6,12 @@ import { GameState, Bet, BetResult } from './types';
 import useWeb3 from './hooks/useWeb3';
 import usePriceFeed from './hooks/usePriceFeed';
 import useMarketData from './hooks/useMarketData';
+import usePlayerStats from './hooks/usePlayerStats';
 import Header from './components/Header';
 import BettingView from './components/BettingView';
 import WaitingView from './components/WaitingView';
 import ResultView from './components/ResultView';
+import AchievementsModal from './components/AchievementsModal';
 import { playSound, preloadSounds } from './utils/sound';
 import { WALLETCONNECT_PROJECT_ID, MONAD_TESTNET_CONFIG, MONAD_TESTNET_CHAIN_ID, MONAD_TESTNET_HEX_CHAIN_ID } from './constants';
 import ConfigurationError from './components/ConfigurationError';
@@ -59,6 +61,7 @@ function MainApp() {
   const [gameState, setGameState] = useState<GameState>(GameState.BETTING);
   const [currentBet, setCurrentBet] = useState<Bet | null>(null);
   const [betResult, setBetResult] = useState<BetResult | null>(null);
+  const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false);
 
   const {
     openModal,
@@ -74,6 +77,8 @@ function MainApp() {
     bettingStep,
     setBettingStep,
   } = useWeb3();
+  
+  const { stats, updateOnWin, updateOnLoss, getAchievements } = usePlayerStats();
 
   const { priceHistory, currentPrice } = usePriceFeed(108540.00);
   const marketData = useMarketData();
@@ -101,6 +106,11 @@ function MainApp() {
     const result = await resolveBet(currentBet, finalPrice);
     if (result) {
         setBetResult(result);
+        if (result.won) {
+            updateOnWin(currentBet, result);
+        } else {
+            updateOnLoss(currentBet, result);
+        }
         setGameState(GameState.RESULT);
         refreshData(); // Refresh data after resolution to show correct final balances
     } else {
@@ -108,7 +118,7 @@ function MainApp() {
         // The error is already set in the useWeb3 hook
         setGameState(GameState.BETTING);
     }
-  }, [currentBet, resolveBet, refreshData]);
+  }, [currentBet, resolveBet, refreshData, updateOnWin, updateOnLoss]);
 
   const handlePlayAgain = useCallback(() => {
     setCurrentBet(null);
@@ -138,6 +148,8 @@ function MainApp() {
             bettingStep={bettingStep}
             setBettingStep={setBettingStep}
             onRefresh={refreshData}
+            playerStats={stats}
+            address={address}
           />
         );
     }
@@ -146,11 +158,21 @@ function MainApp() {
   return (
     <div className="bg-brand-dark min-h-screen text-brand-text font-sans flex flex-col items-center p-4 selection:bg-brand-green selection:text-black">
       <div className="w-full max-w-7xl">
-        <Header address={address} onConnect={openModal} onDisconnect={disconnect} />
+        <Header 
+          address={address} 
+          onConnect={openModal} 
+          onDisconnect={disconnect}
+          onOpenAchievements={() => setIsAchievementsModalOpen(true)}
+        />
         <main className="mt-8">
           {renderContent()}
         </main>
       </div>
+      <AchievementsModal
+        isOpen={isAchievementsModalOpen}
+        onClose={() => setIsAchievementsModalOpen(false)}
+        achievements={getAchievements()}
+      />
     </div>
   );
 }

@@ -27,6 +27,8 @@ export default {
         'pulse-indicator': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.3s ease-out forwards',
         'scale-in': 'scaleIn 0.3s ease-out forwards',
+        'coin-fall': 'coinFall 3s linear forwards',
+        'screen-crack': 'screenCrack 0.2s ease-in forwards',
       },
       keyframes: {
         fadeInSlideUp: {
@@ -45,6 +47,14 @@ export default {
           'from': { transform: 'scale(0.95)', opacity: '0' },
           'to': { transform: 'scale(1)', opacity: '1' },
         },
+        coinFall: {
+          '0%': { transform: 'translateY(-100%) scale(1)', opacity: '1' },
+          '100%': { transform: 'translateY(100vh) scale(0.5)', opacity: '0' },
+        },
+        screenCrack: {
+            'from': { opacity: '0' },
+            'to': { opacity: '1' },
+        }
       }
     },
   },

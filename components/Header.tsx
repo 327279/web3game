@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { playSound, isMuted, toggleMute } from '../utils/sound';
 import SoundOnIcon from './icons/SoundOnIcon';
 import SoundOffIcon from './icons/SoundOffIcon';
+import TrophyIcon from './icons/TrophyIcon';
 
 interface HeaderProps {
   address: string | null | undefined;
   onConnect: () => void;
   onDisconnect: () => void;
+  onOpenAchievements: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => {
+const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect, onOpenAchievements }) => {
   const [muted, setMuted] = useState(isMuted());
   const displayAddress = address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '';
 
@@ -20,6 +22,11 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
         playSound('click');
     }
   };
+  
+  const handleAchievementsClick = () => {
+      playSound('click');
+      onOpenAchievements();
+  }
 
   return (
     <header className="flex justify-between items-center bg-brand-gray p-4 rounded-xl border border-brand-light-gray">
@@ -30,6 +37,11 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
         <button onClick={handleToggleMute} className="text-brand-text hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-brand-light-gray">
           {muted ? <SoundOffIcon className="w-6 h-6" /> : <SoundOnIcon className="w-6 h-6" />}
         </button>
+        {address && (
+            <button onClick={handleAchievementsClick} className="text-brand-text hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-brand-light-gray">
+              <TrophyIcon className="w-6 h-6" />
+            </button>
+        )}
         {address ? (
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
             <span className="text-xs sm:text-sm font-mono bg-brand-dark px-2 py-1 rounded-md border border-brand-light-gray">{displayAddress}</span>
@@ -49,7 +61,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect }) => 
               playSound('click');
               onConnect();
             }}
-            className="bg-brand-green text-black font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105"
+            className="bg-brand-green text-black font-bold py-2 px-3 rounded-lg hover:bg-opacity-80 transition-all duration-200 shadow-green-glow transform hover:scale-105 text-sm sm:text-base"
           >
             Connect Wallet
           </button>

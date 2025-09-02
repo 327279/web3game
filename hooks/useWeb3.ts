@@ -270,7 +270,9 @@ const useWeb3 = () => {
               const { won, payoutAmount } = parsedLog.args;
               return {
                   won: won,
-                  payout: formatBalance(payoutAmount, tokenDecimals.chad)
+                  payout: formatBalance(payoutAmount, tokenDecimals.chad),
+                  betAmount: bet.amount,
+                  leverage: bet.leverage
               };
           }
           
