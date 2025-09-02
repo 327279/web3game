@@ -21,6 +21,7 @@ export interface BetResult {
   payout: number;
   betAmount: number; // Add betAmount to result for stat tracking
   leverage: number; // Add leverage to result for stat tracking
+  finalPrice?: number; // The final price at resolution
 }
 
 export interface Balances {

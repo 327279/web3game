@@ -34,7 +34,7 @@ if (isConfigured) {
     rpcUrl: MONAD_TESTNET_CONFIG.rpcUrls[0],
   };
 
-  const appIcon = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1e1f22"></path><path d="M24 38C16.268 38 10 31.732 10 24C10 16.268 16.268 10 24 10C31.732 10 38 16.268 38 24C38 31.732 31.732 38 24 38Z" fill="#a8ff00"></path><path d="M24 34C18.4772 34 14 29.5228 14 24C14 18.4772 18.4772 14 24 14C29.5228 14 34 18.4772 34 24C34 29.5228 29.5228 34 24 34Z" fill="#131313"></path><path d="M27 18H21V24H27V30H21" stroke="#a8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
+  const appIcon = `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w.org/2000/svg"><path d="M24 6C14.0589 6 6 14.0589 6 24C6 33.9411 14.0589 42 24 42C33.9411 42 42 33.9411 42 24C42 14.0589 33.9411 6 24 6Z" fill="#1e1f22"></path><path d="M24 38C16.268 38 10 31.732 10 24C10 16.268 16.268 10 24 10C31.732 10 38 16.268 38 24C38 31.732 31.732 38 24 38Z" fill="#a8ff00"></path><path d="M24 34C18.4772 34 14 29.5228 14 24C14 18.4772 18.4772 14 24 14C29.5228 14 34 18.4772 34 24C34 29.5228 29.5228 34 24 34Z" fill="#131313"></path><path d="M27 18H21V24H27V30H21" stroke="#a8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
 
   init({
     wallets: [injected, walletConnect],
@@ -109,7 +109,7 @@ function MainApp() {
     
     const result = await resolveBet(currentBet, finalPrice);
     if (result) {
-        setBetResult(result);
+        setBetResult({...result, finalPrice});
         if (result.won) {
             updateOnWin(currentBet, result);
         } else {
@@ -135,7 +135,7 @@ function MainApp() {
       case GameState.WAITING:
         return currentBet && <WaitingView bet={currentBet} onResolution={handleResolution} currentPrice={currentPrice} />;
       case GameState.RESULT:
-        return betResult && <ResultView result={betResult} onPlayAgain={handlePlayAgain} />;
+        return betResult && currentBet && <ResultView result={betResult} bet={currentBet} onPlayAgain={handlePlayAgain} />;
       case GameState.BETTING:
       default:
         return (
