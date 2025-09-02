@@ -13,6 +13,7 @@ import ZoomOutIcon from './icons/ZoomOutIcon';
 import Leaderboard from './Leaderboard';
 import LiveActivityFeed from './LiveActivityFeed';
 import WinStreakIndicator from './WinStreakIndicator';
+import { useLeaderboardData } from '../hooks/useMockData';
 
 interface BettingViewProps {
   priceHistory: { time: string; price: number }[];
@@ -22,6 +23,7 @@ interface BettingViewProps {
   marketData: MarketData;
   onPlaceBet: (bet: { direction: BetDirection; amount: number; leverage: number; duration: number; }) => Promise<boolean>;
   isWalletConnected: boolean;
+  address: string | null | undefined;
   loading: boolean;
   error: string | null;
   bettingStep: BettingStep;
@@ -31,7 +33,7 @@ interface BettingViewProps {
   liveBets: LiveBet[];
 }
 
-const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, loading, error, bettingStep, setBettingStep, onRefresh, playerStats, liveBets }) => {
+const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, balances, dailyLimit, marketData, onPlaceBet, isWalletConnected, address, loading, error, bettingStep, setBettingStep, onRefresh, playerStats, liveBets }) => {
   const [direction, setDirection] = useState<BetDirection>('UP');
   const [leverage, setLeverage] = useState<number>(1);
   const [duration, setDuration] = useState<number>(60);
@@ -42,6 +44,8 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
   const [zoomedData, setZoomedData] = useState(priceHistory);
   const [isZoomed, setIsZoomed] = useState(false);
   const [brushKey, setBrushKey] = useState(0);
+
+  const { pnlData, streakData, volumeData } = useLeaderboardData(address);
 
   useEffect(() => {
     // When a new error comes from the hook, display it.
@@ -386,7 +390,11 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
               </div>
           </div>
 
-          <Leaderboard />
+          <Leaderboard
+            pnlData={pnlData}
+            streakData={streakData}
+            volumeData={volumeData}
+          />
 
           <LiveActivityFeed bets={liveBets} />
 
