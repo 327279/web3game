@@ -43,8 +43,11 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect, onOpe
             </button>
         )}
         {address ? (
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-            <span className="text-sm bg-brand-dark px-4 py-2.5 rounded-lg border border-brand-light-gray">{displayAddress}</span>
+          <div className="flex items-center gap-2">
+            {/* The address display is hidden on smallest screens. Added font-bold to match button style. */}
+            <span className="hidden sm:inline-block bg-brand-dark px-4 py-2.5 rounded-lg border border-brand-light-gray text-sm font-bold">
+              {displayAddress}
+            </span>
             <button
                 onClick={() => {
                   playSound('click');
