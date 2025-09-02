@@ -160,7 +160,7 @@ function MainApp() {
   };
 
   return (
-    <div className="bg-brand-dark min-h-screen text-brand-text font-sans flex flex-col items-center p-4 selection:bg-brand-green selection:text-black">
+    <div className="bg-brand-dark min-h-screen text-brand-text font-sans flex flex-col items-center p-2 sm:p-4 selection:bg-brand-green selection:text-black">
       <div className="w-full max-w-7xl">
         <Header 
           address={address} 

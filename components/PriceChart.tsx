@@ -57,7 +57,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, fullData, currentPrice, o
                         />
                         <YAxis 
                             stroke="#6b7280" 
-                            fontSize={12} 
+                            fontSize={isMobile ? 10 : 12} 
                             tickLine={false} 
                             axisLine={false} 
                             domain={[minPrice - domainMargin, maxPrice + domainMargin]}

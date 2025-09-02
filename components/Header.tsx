@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ address, onConnect, onDisconnect, onOpe
   }
 
   return (
-    <header className="flex justify-between items-center bg-brand-gray p-4 rounded-xl border border-brand-light-gray">
+    <header className="flex justify-between items-center bg-brand-gray p-2 sm:p-4 rounded-xl border border-brand-light-gray">
       <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tighter">
         CHAD<span className="text-brand-green">FLIP</span>
       </h1>
