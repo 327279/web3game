@@ -73,7 +73,7 @@ const ShareableResultCard: React.FC<ShareableResultCardProps> = ({ bet, result, 
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => playSound('click')}
-          className="w-full p-3 rounded-lg bg-[#1DA1F2] text-white font-bold transition-all duration-200 hover:bg-opacity-80 flex items-center justify-center gap-2"
+          className="w-full p-3 rounded-lg bg-[#1DA1F2] text-white font-bold transition-all duration-200 hover:bg-opacity-80 flex items-center justify-center gap-2 transform hover:scale-105"
         >
           <XIcon className="w-5 h-5" />
           <span>SHARE ON X</span>
