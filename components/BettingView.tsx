@@ -139,9 +139,12 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
     if (betToConfirm) {
       const success = await onPlaceBet(betToConfirm);
       if (success) {
-        setIsModalOpen(false);
-        setBetToConfirm(null);
-        setSubmittedDirection(null);
+        // Wait 1.5s to show success animation in modal before closing
+        setTimeout(() => {
+          setIsModalOpen(false);
+          setBetToConfirm(null);
+          setSubmittedDirection(null);
+        }, 1500);
       }
     }
   };
@@ -223,7 +226,7 @@ const BettingView: React.FC<BettingViewProps> = ({ priceHistory, currentPrice, b
                 {isZoomed && (
                     <button 
                         onClick={resetZoom} 
-                        className="flex items-center gap-2 text-brand-text hover:text-white bg-brand-light-gray px-3 py-1 rounded-lg transition-colors text-sm animate-fade-in"
+                        className="flex items-center gap-2 text-brand-text hover:text-white bg-brand-light-gray px-3 py-1 rounded-lg transition-all duration-200 text-sm animate-fade-in transform hover:scale-105"
                         aria-label="Reset chart zoom"
                     >
                         <ZoomOutIcon className="w-4 h-4" />
