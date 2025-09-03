@@ -30,6 +30,7 @@ export default {
         'coin-fall': 'coinFall 3s linear forwards',
         'screen-crack': 'screenCrack 0.2s ease-in forwards',
         'grayscale-in': 'grayscaleIn 0.5s ease-in forwards',
+        'subtle-bounce': 'subtleBounce 0.4s ease-out forwards',
       },
       keyframes: {
         fadeInSlideUp: {
@@ -59,7 +60,12 @@ export default {
         grayscaleIn: {
             'from': { filter: 'grayscale(0)' },
             'to': { filter: 'grayscale(100%)' },
-        }
+        },
+        subtleBounce: {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '60%': { transform: 'scale(1.05)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       }
     },
   },
